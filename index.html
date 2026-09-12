@@ -3,43 +3,51 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#030303">
-<title>THE HOUSE IS WATCHING — Horror Prototype</title>
-<link rel="stylesheet" href="style.css?v=10">
+<meta name="theme-color" content="#050505">
+<title>THE HOUSE IS WATCHING</title>
+<link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
-<div id="boot" class="overlay"><div class="title-big">THE HOUSE<br><span>IS WATCHING</span></div><p>1–4 PLAYER CO-OP HORROR</p><button id="startBtn">ENTER THE HOUSE</button><small>Headphones recommended · WASD / touch controls</small></div>
+<div id="boot" class="overlay"><div class="title-big">THE HOUSE<br><span>IS WATCHING</span></div><p>1–4 PLAYER CO-OP HORROR</p><button id="startBtn">ENTER THE HOUSE</button><small>Headphones recommended · Stay together</small></div>
 <main id="game">
 <header id="hud">
-  <div class="topline"><div class="brand">THE HOUSE IS WATCHING <span>BUILD 0.3</span></div><div class="objective" id="objective">Restore the power.</div><div class="stats"><span id="status">Something is waiting.</span><span id="fear">FEAR 12%</span></div></div>
-  <div class="bars"><div class="bar"><i id="fearBar"></i></div><div class="battery"><span>▣</span><i id="batteryBar"></i></div><div class="inventory" id="inventory">EMPTY HANDS</div></div>
+  <div class="brand">THE HOUSE<br><span>IS WATCHING</span></div>
+  <div class="fear-panel"><b>FEAR</b><div class="fear-track"><i id="fearBar"></i></div><strong id="fear">12%</strong></div>
+  <button class="icon pause" aria-label="Pause">Ⅱ</button><button class="icon gear" aria-label="Settings">⚙</button>
+  <div class="objective-panel"><label>OBJECTIVE:</label><strong id="objective">Find the fuse.</strong>
+    <div class="checklist"><div id="checkFuse" class="active"><i></i>Find the fuse</div><div id="checkKey"><i></i>Find the key</div><div id="checkDoll"><i></i>Find the doll</div><div id="checkEscape"><i></i>Escape the house</div></div>
+  </div>
+  <div class="quote" id="quote">“You are not alone...”</div>
+  <div class="battery-ui"><span>FLASHLIGHT</span><div class="battery"><i id="batteryBar"></i></div></div>
+  <div class="inventory" id="inventory">EMPTY HANDS</div>
 </header>
-<section id="scene" aria-label="First person house">
-  <div class="sky"></div><div class="ceiling"></div><div class="light-core"></div>
-  <div class="back-wall"></div><div class="left-wall"></div><div class="right-wall"></div><div class="floor"></div>
-  <div class="hallway" id="hallway"></div><div class="window"><i></i></div>
-  <div class="door exit-door" id="exitDoor"><b>EXIT</b><span>LOCKED</span></div>
-  <div class="door hall-door" id="hallDoor"><b>HALL</b></div>
-  <div class="door basement-door" id="basementDoor"><b>BASEMENT</b><span>▾</span></div>
-  <div class="furniture table"></div><div class="furniture sofa"></div><div class="furniture cabinet"></div><div class="furniture chair"></div>
-  <div class="object fuse" id="fuse">FUSE</div><div class="object key hidden" id="key">KEY</div><div class="object doll hidden" id="doll">●</div>
-  <div class="object note hidden" id="note">NOTE</div><div class="object battery-item hidden" id="batteryItem">+</div>
+<section id="scene" aria-label="House hallway">
+  <div class="hall-ceiling"></div><div class="lamp"></div><div class="lamp-glow"></div>
+  <div class="far-wall"></div><div class="left-wall"></div><div class="right-wall"></div>
+  <div class="floor"></div><div class="runner"></div><div class="baseboard left-base"></div><div class="baseboard right-base"></div>
+  <div class="picture p1"></div><div class="picture p2"></div><div class="picture p3"></div>
+  <div class="doorframe far-frame"><div class="far-door"></div></div>
+  <div class="doorframe left-door"><div class="wood-door"></div></div><div class="doorframe right-door"><div class="wood-door"></div></div>
+  <div class="doorframe exit-door" id="exitDoor"><div class="wood-door"><b>EXIT</b><span>LOCKED</span></div></div>
+  <div class="graffiti">DON'T<br>TURN<br>AROUND</div>
+  <div class="table"><div class="lamp-table"></div><div class="photo"></div></div>
+  <div class="object fuse" id="fuse">FUSE</div><div class="object key hidden" id="key">KEY</div><div class="object doll hidden" id="doll">●</div><div class="object note hidden" id="note">NOTE</div><div class="object battery-item hidden" id="batteryItem">+</div>
   <div class="hiding-spot" id="hidingSpot">HIDE</div>
   <div class="entity" id="entity"><div class="eyes">•　•</div></div>
-  <div class="heartbeat" id="heartbeat"></div><div class="whisper" id="whisper"></div><div class="noise" id="noise"></div><div class="vignette"></div>
-  <div id="message" aria-live="polite"></div>
+  <div class="heartbeat" id="heartbeat"></div><div class="whisper" id="whisper"></div><div class="noise" id="noise"></div><div class="vignette"></div><div id="message" aria-live="polite"></div>
 </section>
 <section id="controls">
  <div class="mobile-controls">
-  <div class="dpad"><button data-key="w">▲</button><button data-key="a">◀</button><button data-key="s">▼</button><button data-key="d">▶</button></div>
-  <div class="control-stack"><button id="lightBtn">🔦</button><button id="runBtn">RUN</button></div>
-  <button id="interactBtn" class="primary">INTERACT</button>
+  <div class="joystick"><span></span><button data-key="w">▲</button><button data-key="a">◀</button><button data-key="s">▼</button><button data-key="d">▶</button></div>
+  <button id="lightBtn" class="round-action">🔦<small>LIGHT</small></button>
+  <button id="interactBtn" class="round-action interact"><span>✋</span><small>INTERACT</small></button>
+  <button id="runBtn" class="round-action"><span>🏃</span><small>RUN</small></button>
  </div>
- <div class="desktop-help">WASD / ARROWS MOVE · E INTERACT · F FLASHLIGHT · SHIFT RUN · H HIDE</div>
+ <div class="desktop-help">WASD / ARROWS · E INTERACT · F FLASHLIGHT · SHIFT RUN · H HIDE</div>
 </section>
 </main>
 <div id="death" class="overlay hidden"><div class="title-big small">IT FOUND YOU</div><p id="deathText">The house is still listening.</p><button id="retryBtn">TRY AGAIN</button></div>
 <div id="win" class="overlay hidden"><div class="title-big small">YOU ESCAPED</div><p>The house remembers what you did.</p><button id="againBtn">PLAY AGAIN</button></div>
-<script src="game.js?v=10"></script>
+<script src="game.js?v=20"></script>
 </body>
 </html>
