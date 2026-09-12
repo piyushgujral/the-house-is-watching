@@ -10,7 +10,6 @@ concurrency:
 
 jobs:
   gemini:
-    # Only trusted repository collaborators can invoke the coding agent.
     if: >-
       github.event.sender.type == 'User' &&
       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association) &&
@@ -36,6 +35,7 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           REPOSITORY: ${{ github.repository }}
           IS_PULL_REQUEST: ${{ github.event.issue.pull_request != null }}
+          GEMINI_CLI_TRUST_WORKSPACE: 'true'
         with:
           gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
           workflow_name: 'gemini-game-developer'
