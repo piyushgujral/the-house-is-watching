@@ -1,38 +1,45 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-  <meta name="theme-color" content="#050505">
-  <title>The House Is Watching — V0.2</title>
-  <link rel="stylesheet" href="style.css?v=2">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#030303">
+<title>THE HOUSE IS WATCHING — Horror Prototype</title>
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
-  <main id="game">
-    <header id="hud">
-      <div class="brand">THE HOUSE IS WATCHING <span>V0.2</span></div>
-      <div id="objective">Objective: Find the fuse.</div>
-      <div class="stats"><span id="status">Explore carefully.</span><span id="fear">Fear 12%</span></div>
-    </header>
-    <section id="scene" aria-label="House interior">
-      <div class="ceiling-light"></div><div class="room room-back"></div><div class="room room-hall"></div>
-      <div class="wall wall-left"></div><div class="wall wall-right"></div><div class="floor"></div><div class="rug"></div><div class="window"><span></span></div>
-      <div class="door" id="exitDoor"><span>EXIT</span></div><div class="door side-door" id="sideDoor"><span>HALL</span></div>
-      <div class="furniture table"></div><div class="furniture cabinet"></div><div class="furniture chair"></div>
-      <button class="interactable fuse item" id="fuse" type="button" aria-label="Fuse">?</button>
-      <button class="interactable key item hidden" id="key" type="button" aria-label="Key">K</button>
-      <button class="interactable doll item hidden" id="doll" type="button" aria-label="Doll">◉</button>
-      <div class="whisper" id="whisper">...</div><div class="shadow" id="shadow" aria-hidden="true"></div><div class="vignette"></div>
-      <div id="message" role="status" aria-live="polite"></div>
-    </section>
-    <section id="controls" aria-label="Controls">
-      <div class="mobile-controls">
-        <div class="dpad"><button data-key="w">▲</button><button data-key="a">◀</button><button data-key="s">▼</button><button data-key="d">▶</button></div>
-        <button id="lookBtn" class="action secondary">LIGHT</button><button id="interactBtn" class="action">INTERACT</button>
-      </div>
-      <div class="desktop-help">WASD / Arrows: move · E / Enter: interact · F: flashlight</div>
-    </section>
-  </main>
-  <script src="game.js?v=2"></script>
+<div id="boot" class="overlay"><div class="title-big">THE HOUSE<br><span>IS WATCHING</span></div><p>1–4 PLAYER CO-OP HORROR</p><button id="startBtn">ENTER THE HOUSE</button><small>Headphones recommended · WASD / touch controls</small></div>
+<main id="game">
+<header id="hud">
+  <div class="topline"><div class="brand">THE HOUSE IS WATCHING <span>BUILD 0.3</span></div><div class="objective" id="objective">Restore the power.</div><div class="stats"><span id="status">Something is waiting.</span><span id="fear">FEAR 12%</span></div></div>
+  <div class="bars"><div class="bar"><i id="fearBar"></i></div><div class="battery"><span>▣</span><i id="batteryBar"></i></div><div class="inventory" id="inventory">EMPTY HANDS</div></div>
+</header>
+<section id="scene" aria-label="First person house">
+  <div class="sky"></div><div class="ceiling"></div><div class="light-core"></div>
+  <div class="back-wall"></div><div class="left-wall"></div><div class="right-wall"></div><div class="floor"></div>
+  <div class="hallway" id="hallway"></div><div class="window"><i></i></div>
+  <div class="door exit-door" id="exitDoor"><b>EXIT</b><span>LOCKED</span></div>
+  <div class="door hall-door" id="hallDoor"><b>HALL</b></div>
+  <div class="door basement-door" id="basementDoor"><b>BASEMENT</b><span>▾</span></div>
+  <div class="furniture table"></div><div class="furniture sofa"></div><div class="furniture cabinet"></div><div class="furniture chair"></div>
+  <div class="object fuse" id="fuse">FUSE</div><div class="object key hidden" id="key">KEY</div><div class="object doll hidden" id="doll">●</div>
+  <div class="object note hidden" id="note">NOTE</div><div class="object battery-item hidden" id="batteryItem">+</div>
+  <div class="hiding-spot" id="hidingSpot">HIDE</div>
+  <div class="entity" id="entity"><div class="eyes">•　•</div></div>
+  <div class="heartbeat" id="heartbeat"></div><div class="whisper" id="whisper"></div><div class="noise" id="noise"></div><div class="vignette"></div>
+  <div id="message" aria-live="polite"></div>
+</section>
+<section id="controls">
+ <div class="mobile-controls">
+  <div class="dpad"><button data-key="w">▲</button><button data-key="a">◀</button><button data-key="s">▼</button><button data-key="d">▶</button></div>
+  <div class="control-stack"><button id="lightBtn">🔦</button><button id="runBtn">RUN</button></div>
+  <button id="interactBtn" class="primary">INTERACT</button>
+ </div>
+ <div class="desktop-help">WASD / ARROWS MOVE · E INTERACT · F FLASHLIGHT · SHIFT RUN · H HIDE</div>
+</section>
+</main>
+<div id="death" class="overlay hidden"><div class="title-big small">IT FOUND YOU</div><p id="deathText">The house is still listening.</p><button id="retryBtn">TRY AGAIN</button></div>
+<div id="win" class="overlay hidden"><div class="title-big small">YOU ESCAPED</div><p>The house remembers what you did.</p><button id="againBtn">PLAY AGAIN</button></div>
+<script src="game.js?v=10"></script>
 </body>
 </html>
