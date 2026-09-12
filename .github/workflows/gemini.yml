@@ -1,0 +1,109 @@
+name: Gemini Game Developer
+
+on:
+  issue_comment:
+    types: [created]
+
+concurrency:
+  group: gemini-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  gemini:
+    # Only trusted repository collaborators can invoke the coding agent.
+    if: >-
+      github.event.sender.type == 'User' &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association) &&
+      startsWith(github.event.comment.body, '@gemini-cli')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gemini coding agent
+        uses: google-github-actions/run-gemini-cli@v0.1.22
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GEMINI_REQUEST: ${{ github.event.comment.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPOSITORY: ${{ github.repository }}
+          IS_PULL_REQUEST: ${{ github.event.issue.pull_request != null }}
+        with:
+          gemini_api_key: ${{ secrets.GEMINI_API_KEY }}
+          workflow_name: 'gemini-game-developer'
+          github_issue_number: ${{ github.event.issue.number }}
+          settings: |-
+            {
+              "model": {
+                "maxSessionTurns": 30
+              },
+              "telemetry": {
+                "enabled": true,
+                "target": "local",
+                "outfile": ".gemini/telemetry.log"
+              },
+              "mcpServers": {
+                "github": {
+                  "command": "docker",
+                  "args": [
+                    "run",
+                    "-i",
+                    "--rm",
+                    "-e",
+                    "GITHUB_PERSONAL_ACCESS_TOKEN",
+                    "ghcr.io/github/github-mcp-server:v0.27.0"
+                  ],
+                  "includeTools": [
+                    "add_issue_comment",
+                    "issue_read",
+                    "list_issues",
+                    "search_issues",
+                    "create_pull_request",
+                    "pull_request_read",
+                    "list_pull_requests",
+                    "search_pull_requests",
+                    "create_branch",
+                    "create_or_update_file",
+                    "delete_file",
+                    "get_commit",
+                    "get_file_contents",
+                    "list_commits",
+                    "push_files",
+                    "search_code"
+                  ],
+                  "env": {
+                    "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+                  }
+                }
+              },
+              "tools": {
+                "core": [
+                  "run_shell_command(cat)",
+                  "run_shell_command(echo)",
+                  "run_shell_command(grep)",
+                  "run_shell_command(head)",
+                  "run_shell_command(tail)"
+                ]
+              }
+            }
+          prompt: |-
+            You are the lead developer for THE HOUSE IS WATCHING.
+
+            Read GEMINI.md before doing anything else. Inspect the repository and understand the existing architecture before changing code.
+
+            The trusted repository owner has requested this task through a GitHub comment:
+            ${{ github.event.comment.body }}
+
+            Implement the requested task completely. Do not merely explain how to do it.
+            Preserve working functionality, prioritize a real production-quality implementation, and keep mobile performance in mind.
+            Run appropriate syntax checks, tests or build checks after making changes.
+            If code changes are needed, commit them and push the completed changes to the current repository branch. Do not commit secrets.
+            At the end, report the files changed, the implementation completed, and the checks performed.
