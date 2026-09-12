@@ -3,41 +3,53 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-  <title>The House Is Watching — V0.1</title>
+  <meta name="theme-color" content="#050505">
+  <title>The House Is Watching — V0.2</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main id="game" aria-label="The House Is Watching prototype">
-    <div id="hud">
-      <div class="brand">THE HOUSE IS WATCHING</div>
+  <main id="game">
+    <header id="hud">
+      <div class="brand">THE HOUSE IS WATCHING <span>V0.2</span></div>
       <div id="objective">Objective: Find the fuse.</div>
-      <div id="status">Explore carefully.</div>
-    </div>
+      <div class="stats"><span id="status">Explore carefully.</span><span id="fear">Fear 12%</span></div>
+    </header>
 
     <section id="scene" aria-label="House interior">
+      <div class="ceiling-light"></div>
       <div class="room room-back"></div>
+      <div class="room room-hall"></div>
       <div class="wall wall-left"></div>
       <div class="wall wall-right"></div>
       <div class="floor"></div>
+      <div class="rug"></div>
+      <div class="window"><span></span></div>
       <div class="door" id="exitDoor"><span>EXIT</span></div>
+      <div class="door side-door" id="sideDoor"><span>HALL</span></div>
       <div class="furniture table"></div>
       <div class="furniture cabinet"></div>
-      <button class="interactable fuse" id="fuse" type="button" aria-label="Fuse">?</button>
+      <div class="furniture chair"></div>
+      <button class="interactable fuse item" id="fuse" type="button" aria-label="Fuse">?</button>
+      <button class="interactable key item hidden" id="key" type="button" aria-label="Key">K</button>
+      <button class="interactable doll item hidden" id="doll" type="button" aria-label="Doll">◉</button>
+      <div class="whisper" id="whisper">...</div>
       <div class="shadow" id="shadow" aria-hidden="true"></div>
+      <div class="vignette"></div>
       <div id="message" role="status" aria-live="polite"></div>
     </section>
 
     <section id="controls" aria-label="Controls">
       <div class="mobile-controls">
         <div class="dpad">
-          <button data-key="w">▲</button>
-          <button data-key="a">◀</button>
-          <button data-key="s">▼</button>
-          <button data-key="d">▶</button>
+          <button data-key="w" aria-label="Move forward">▲</button>
+          <button data-key="a" aria-label="Move left">◀</button>
+          <button data-key="s" aria-label="Move backward">▼</button>
+          <button data-key="d" aria-label="Move right">▶</button>
         </div>
+        <button id="lookBtn" class="action secondary">LIGHT</button>
         <button id="interactBtn" class="action">INTERACT</button>
       </div>
-      <div class="desktop-help">WASD / Arrow keys: move · E / Enter: interact</div>
+      <div class="desktop-help">WASD / Arrows: move · E / Enter: interact · F: flashlight</div>
     </section>
   </main>
   <script src="game.js"></script>
