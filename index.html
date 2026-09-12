@@ -5,21 +5,27 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#050505">
 <title>THE HOUSE IS WATCHING</title>
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
-<div id="boot" class="overlay"><div class="title-big">THE HOUSE<br><span>IS WATCHING</span></div><p>1–4 PLAYER CO-OP HORROR</p><button id="startBtn">ENTER THE HOUSE</button><small>Headphones recommended · Stay together</small></div>
+<div id="boot" class="overlay">
+  <div class="title-big">THE HOUSE<br><span>IS WATCHING</span></div>
+  <p>1–4 PLAYER CO-OP HORROR</p>
+  <button id="startBtn" type="button" onclick="document.getElementById('boot').classList.add('hidden'); if(window.startGame) window.startGame();" ontouchend="this.click(); return false;">ENTER THE HOUSE</button>
+  <small>Headphones recommended · Stay together</small>
+</div>
 <main id="game">
 <header id="hud">
   <div class="brand">THE HOUSE<br><span>IS WATCHING</span></div>
   <div class="fear-panel"><b>FEAR</b><div class="fear-track"><i id="fearBar"></i></div><strong id="fear">12%</strong></div>
-  <button class="icon pause" aria-label="Pause">Ⅱ</button><button class="icon gear" aria-label="Settings">⚙</button>
+  <button class="icon pause" aria-label="Pause" type="button">Ⅱ</button><button class="icon gear" aria-label="Settings" type="button">⚙</button>
   <div class="objective-panel"><label>OBJECTIVE:</label><strong id="objective">Find the fuse.</strong>
     <div class="checklist"><div id="checkFuse" class="active"><i></i>Find the fuse</div><div id="checkKey"><i></i>Find the key</div><div id="checkDoll"><i></i>Find the doll</div><div id="checkEscape"><i></i>Escape the house</div></div>
   </div>
   <div class="quote" id="quote">“You are not alone...”</div>
   <div class="battery-ui"><span>FLASHLIGHT</span><div class="battery"><i id="batteryBar"></i></div></div>
   <div class="inventory" id="inventory">EMPTY HANDS</div>
+  <div id="status" class="status">READY</div>
 </header>
 <section id="scene" aria-label="House hallway">
   <div class="hall-ceiling"></div><div class="lamp"></div><div class="lamp-glow"></div>
@@ -38,16 +44,16 @@
 </section>
 <section id="controls">
  <div class="mobile-controls">
-  <div class="joystick"><span></span><button data-key="w">▲</button><button data-key="a">◀</button><button data-key="s">▼</button><button data-key="d">▶</button></div>
-  <button id="lightBtn" class="round-action">🔦<small>LIGHT</small></button>
-  <button id="interactBtn" class="round-action interact"><span>✋</span><small>INTERACT</small></button>
-  <button id="runBtn" class="round-action"><span>🏃</span><small>RUN</small></button>
+  <div class="joystick"><span></span><button type="button" data-key="w">▲</button><button type="button" data-key="a">◀</button><button type="button" data-key="s">▼</button><button type="button" data-key="d">▶</button></div>
+  <button id="lightBtn" class="round-action" type="button">🔦<small>LIGHT</small></button>
+  <button id="interactBtn" class="round-action interact" type="button"><span>✋</span><small>INTERACT</small></button>
+  <button id="runBtn" class="round-action" type="button"><span>🏃</span><small>RUN</small></button>
  </div>
  <div class="desktop-help">WASD / ARROWS · E INTERACT · F FLASHLIGHT · SHIFT RUN · H HIDE</div>
 </section>
 </main>
-<div id="death" class="overlay hidden"><div class="title-big small">IT FOUND YOU</div><p id="deathText">The house is still listening.</p><button id="retryBtn">TRY AGAIN</button></div>
-<div id="win" class="overlay hidden"><div class="title-big small">YOU ESCAPED</div><p>The house remembers what you did.</p><button id="againBtn">PLAY AGAIN</button></div>
-<script src="game.js?v=20"></script>
+<div id="death" class="overlay hidden"><div class="title-big small">IT FOUND YOU</div><p id="deathText">The house is still listening.</p><button id="retryBtn" type="button">TRY AGAIN</button></div>
+<div id="win" class="overlay hidden"><div class="title-big small">YOU ESCAPED</div><p>The house remembers what you did.</p><button id="againBtn" type="button">PLAY AGAIN</button></div>
+<script src="game.js?v=21"></script>
 </body>
 </html>
