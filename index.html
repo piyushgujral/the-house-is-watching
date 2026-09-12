@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+  <title>The House Is Watching — V0.1</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="game" aria-label="The House Is Watching prototype">
+    <div id="hud">
+      <div class="brand">THE HOUSE IS WATCHING</div>
+      <div id="objective">Objective: Find the fuse.</div>
+      <div id="status">Explore carefully.</div>
+    </div>
+
+    <section id="scene" aria-label="House interior">
+      <div class="room room-back"></div>
+      <div class="wall wall-left"></div>
+      <div class="wall wall-right"></div>
+      <div class="floor"></div>
+      <div class="door" id="exitDoor"><span>EXIT</span></div>
+      <div class="furniture table"></div>
+      <div class="furniture cabinet"></div>
+      <button class="interactable fuse" id="fuse" type="button" aria-label="Fuse">?</button>
+      <div class="shadow" id="shadow" aria-hidden="true"></div>
+      <div id="message" role="status" aria-live="polite"></div>
+    </section>
+
+    <section id="controls" aria-label="Controls">
+      <div class="mobile-controls">
+        <div class="dpad">
+          <button data-key="w">▲</button>
+          <button data-key="a">◀</button>
+          <button data-key="s">▼</button>
+          <button data-key="d">▶</button>
+        </div>
+        <button id="interactBtn" class="action">INTERACT</button>
+      </div>
+      <div class="desktop-help">WASD / Arrow keys: move · E / Enter: interact</div>
+    </section>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
