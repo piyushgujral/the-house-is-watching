@@ -1,41 +1,27 @@
-const state={x:50,y:58,speed:1.2,fuse:false,changed:false,escaped:false,keys:{}};
-const statusEl=document.getElementById('status');
-const objectiveEl=document.getElementById('objective');
-const messageEl=document.getElementById('message');
-const scene=document.getElementById('scene');
-const fuse=document.getElementById('fuse');
-const shadow=document.getElementById('shadow');
-const exitDoor=document.getElementById('exitDoor');
-
+const state={x:50,y:58,speed:1.35,fuse:false,key:false,doll:false,changed:false,escaped:false,lights:true,fear:12,stage:0,keys:{}};
+const statusEl=document.getElementById('status'),objectiveEl=document.getElementById('objective'),fearEl=document.getElementById('fear'),messageEl=document.getElementById('message'),scene=document.getElementById('scene');
+const fuse=document.getElementById('fuse'),key=document.getElementById('key'),doll=document.getElementById('doll'),shadow=document.getElementById('shadow'),exitDoor=document.getElementById('exitDoor'),sideDoor=document.getElementById('sideDoor'),whisper=document.getElementById('whisper'),lookBtn=document.getElementById('lookBtn');
 function say(text,ms=2200){messageEl.textContent=text;clearTimeout(say.timer);say.timer=setTimeout(()=>messageEl.textContent='',ms)}
-function render(){document.documentElement.style.setProperty('--px',state.x+'%');document.documentElement.style.setProperty('--py',state.y+'%')}
-function move(dx,dy){if(state.escaped)return;state.x=Math.max(8,Math.min(92,state.x+dx*state.speed));state.y=Math.max(16,Math.min(78,state.y+dy*state.speed));render()}
+function render(){document.documentElement.style.setProperty('--px',state.x+'%');document.documentElement.style.setProperty('--py',state.y+'%');fearEl.textContent=`Fear ${Math.round(state.fear)}%`}
+function near(el,tx,ty,r=12){return Math.abs(state.x-tx)<r&&Math.abs(state.y-ty)<r}
+function move(dx,dy){if(state.escaped)return;state.x=Math.max(8,Math.min(92,state.x+dx*state.speed));state.y=Math.max(16,Math.min(80,state.y+dy*state.speed));if(state.changed)state.fear=Math.min(100,state.fear+.025);render()}
+function toggleLight(){if(state.escaped)return;state.lights=!state.lights;scene.classList.toggle('lights-off',!state.lights);lookBtn.textContent=state.lights?'LIGHT':'DARK';say(state.lights?'The flashlight steadies your breathing.':'You switch the light off. Bad idea.',1500)}
+function updateObjective(){if(!state.fuse)objectiveEl.textContent='Objective: Find the fuse.';else if(!state.key)objectiveEl.textContent='Objective: Find the house key.';else if(!state.doll)objectiveEl.textContent='Objective: Find the watcher doll.';else objectiveEl.textContent='Objective: Return to the exit.'}
 function interact(){
   if(state.escaped)return;
-  const nearFuse=Math.abs(state.x-68)<10&&Math.abs(state.y-40)<14;
-  const nearExit=Math.abs(state.x-50)<13&&Math.abs(state.y-30)<20;
-  if(!state.fuse&&nearFuse){
-    state.fuse=true;fuse.classList.add('found');fuse.textContent='✓';
-    objectiveEl.textContent='Objective: Reach the exit.';statusEl.textContent='The electricity is back.';
-    say('You found the fuse. Something heard you.',2600);
-    setTimeout(triggerChange,900);return;
-  }
-  if(state.fuse&&nearExit){
-    state.escaped=true;objectiveEl.textContent='ESCAPED';statusEl.textContent='V0.1 complete';say('You escaped... for now.',5000);return;
-  }
-  if(!state.fuse)say('I need to search the room.');else say('The exit is somewhere ahead.');
+  if(!state.fuse&&near(fuse,68,40,14)){state.fuse=true;fuse.classList.add('found');fuse.textContent='✓';state.fear+=8;statusEl.textContent='The electricity is back.';updateObjective();say('You found the fuse. Something heard you.',2600);setTimeout(triggerChange,850);return}
+  if(state.fuse&&!state.key&&near(key,30,51,14)){state.key=true;key.classList.add('hidden');state.fear+=10;statusEl.textContent='A key... but it is warm.';updateObjective();say('You picked up a key. It was just moved.',2600);setTimeout(()=>whisperEvent(),700);return}
+  if(state.key&&!state.doll&&near(doll,58,39,14)){state.doll=true;doll.classList.add('hidden');state.fear+=15;statusEl.textContent='The doll is watching you.';updateObjective();say('Do not look behind you.',2800);setTimeout(triggerSecondScare,900);return}
+  if(state.fuse&&state.key&&state.doll&&near(exitDoor,50,30,22)){state.escaped=true;objectiveEl.textContent='ESCAPED';statusEl.textContent='V0.2 complete';say('You escaped... but the house learned your name.',5000);shadow.classList.remove('show');return}
+  if(!state.fuse)say('Search the room. The fuse is somewhere nearby.');else if(!state.key)say('The house feels larger than before.');else if(!state.doll)say('Something small is watching from the dark.');else say('The exit is waiting.');
 }
-function triggerChange(){
-  if(state.changed)return;state.changed=true;scene.classList.add('house-changed');shadow.classList.add('show');
-  say('THE HOUSE HAS CHANGED.',2500);
-  setTimeout(()=>shadow.classList.add('move'),800);
-  setTimeout(()=>{statusEl.textContent='The hallway feels different.';},1500);
-}
-window.addEventListener('keydown',e=>{state.keys[e.key.toLowerCase()]=true;if(['e','enter'].includes(e.key.toLowerCase()))interact()});
+function triggerChange(){if(state.changed)return;state.changed=true;state.fear+=12;scene.classList.add('house-changed');shadow.classList.add('show');say('THE HOUSE HAS CHANGED.',2500);setTimeout(()=>shadow.classList.add('move'),800);setTimeout(()=>{key.classList.remove('hidden');statusEl.textContent='A door moved. Find the key.';updateObjective()},1300);}
+function whisperEvent(){whisper.textContent=['DON’T TURN AROUND','I SAW YOU','HE IS HERE'][Math.floor(Math.random()*3)];whisper.classList.remove('show');void whisper.offsetWidth;whisper.classList.add('show');state.fear=Math.min(100,state.fear+7);render()}
+function triggerSecondScare(){state.fear=Math.min(100,state.fear+18);shadow.classList.remove('show','move');void shadow.offsetWidth;shadow.classList.add('show');say('You are not alone.',2200);setTimeout(()=>shadow.classList.add('move'),500);setTimeout(()=>statusEl.textContent='Run to the exit.',1300);render()}
+window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();state.keys[k]=true;if(['e','enter'].includes(k))interact();if(k==='f')toggleLight()});
 window.addEventListener('keyup',e=>state.keys[e.key.toLowerCase()]=false);
 setInterval(()=>{let dx=0,dy=0;if(state.keys.w||state.keys.arrowup)dy-=1;if(state.keys.s||state.keys.arrowdown)dy+=1;if(state.keys.a||state.keys.arrowleft)dx-=1;if(state.keys.d||state.keys.arrowright)dx+=1;if(dx||dy){const n=Math.hypot(dx,dy);move(dx/n,dy/n)}},30);
-
 document.querySelectorAll('[data-key]').forEach(btn=>{const k=btn.dataset.key;const down=e=>{e.preventDefault();state.keys[k]=true};const up=e=>{e.preventDefault();state.keys[k]=false};btn.addEventListener('touchstart',down,{passive:false});btn.addEventListener('touchend',up,{passive:false});btn.addEventListener('mousedown',down);btn.addEventListener('mouseup',up);btn.addEventListener('mouseleave',up)});
-document.getElementById('interactBtn').addEventListener('click',interact);
-fuse.addEventListener('click',interact);exitDoor.addEventListener('click',interact);
+document.getElementById('interactBtn').addEventListener('click',interact);lookBtn.addEventListener('click',toggleLight);fuse.addEventListener('click',interact);key.addEventListener('click',interact);doll.addEventListener('click',interact);exitDoor.addEventListener('click',interact);sideDoor.addEventListener('click',()=>say(state.changed?'The hallway moved when you looked away.':'It will not open yet.'));
+setInterval(()=>{if(state.changed&&!state.escaped){state.fear=Math.min(100,state.fear+(Math.random()-.35)*.18);if(Math.random()<.025)whisperEvent();render()}},1000);
 render();say('Find the fuse. And stay together.',3000);
