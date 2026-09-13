@@ -1,5 +1,5 @@
 /*
- * THE HOUSE IS WATCHING - Engine 9.0 Gameplay Upgrade
+ * THE HOUSE IS WATCHING - Engine 9.1 Gameplay Upgrade
  * Zero-dependency Three.js horror vertical slice.
  * Designed for GitHub Pages, desktop + landscape mobile.
  */
@@ -32,8 +32,7 @@
 
   function texture(base, lines){
     const c=document.createElement('canvas'); c.width=256; c.height=256; const x=c.getContext('2d');
-    x.fillStyle=base; x.fillRect(0,0,256,256);
-    x.globalAlpha=.35;
+    x.fillStyle=base; x.fillRect(0,0,256,256); x.globalAlpha=.35;
     for(let i=0;i<lines;i++){ x.fillStyle=i%2?'#080706':'#37302b'; x.fillRect(Math.random()*256,Math.random()*256,1+Math.random()*3,8+Math.random()*24); }
     x.globalAlpha=1; return new THREE.CanvasTexture(c);
   }
@@ -48,13 +47,16 @@
       this.colliders=[]; this.interactables=[]; this.current=null; this.tempMove=new THREE.Vector3(); this.tempForward=new THREE.Vector3(); this.tempSide=new THREE.Vector3();
       this.tempDir=new THREE.Vector3(); this.tempLook=new THREE.Vector3(); this.ray=new THREE.Raycaster(); this.clock=new THREE.Clock(); this.lastStep=0; this.lastBeat=0; this.lastInteractionCheck=0; this.lastHUD={};
       this.initThree(); this.buildHouse(); this.initEntity(); this.bindEvents(); this.setupMobile(); this.updateObjective(); this.updateInventory(); this.checkOrientation();
+      /* Public runtime handle for extension modules loaded after game9.js. */
+      window.houseGame=this;
     }
 
     initThree(){
       this.scene=new THREE.Scene(); this.scene.background=new THREE.Color(0x040405); this.scene.fog=new THREE.FogExp2(0x050507,.075);
       this.camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.08,60); this.player=new THREE.Vector3(0,1.6,11.5); this.camera.position.copy(this.player);
       this.renderer=new THREE.WebGLRenderer({antialias:this.quality==='high',powerPreference:'high-performance'}); this.renderer.setSize(innerWidth,innerHeight); this.container=$('game-container'); this.container.appendChild(this.renderer.domElement); this.applyQuality();
-      this.renderer.outputColorSpace=THREE.SRGBColorSpace||undefined; this.renderer.toneMapping=THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure=.82;
+      if('outputColorSpace' in this.renderer)this.renderer.outputColorSpace=THREE.SRGBColorSpace; else this.renderer.outputEncoding=THREE.sRGBEncoding;
+      this.renderer.toneMapping=THREE.ACESFilmicToneMapping; this.renderer.toneMappingExposure=.82;
       this.ambient=new THREE.AmbientLight(0x15151b,.3); this.scene.add(this.ambient);
       this.flashlight=new THREE.SpotLight(0xffecd0,2.8,16,Math.PI/6,.5,1.25); this.flashTarget=new THREE.Object3D(); this.scene.add(this.flashTarget,this.flashlight); this.flashlight.target=this.flashTarget;
       this.tempLight=new THREE.PointLight(0xff9b5d,0,8); this.tempLight.position.set(0,2.5,4); this.scene.add(this.tempLight);
@@ -75,9 +77,7 @@
       this.wallMat=this.material(texture('#201d1b',420),.9); this.floorMat=this.material(texture('#17110d',80),.72); this.frameMat=new THREE.MeshStandardMaterial({color:0x251b17,roughness:.8}); this.frameGeo=new THREE.BoxGeometry(.18,3,.18);
       const floor=new THREE.Mesh(new THREE.PlaneGeometry(24,30),this.floorMat); floor.rotation.x=-Math.PI/2; this.scene.add(floor);
       const ceil=new THREE.Mesh(new THREE.PlaneGeometry(24,30),new THREE.MeshStandardMaterial({color:0x111114,roughness:1})); ceil.rotation.x=Math.PI/2; ceil.position.y=3; this.scene.add(ceil);
-      // Perimeter with a real entrance opening.
       this.wall(-8,-15,8,.4); this.wall(8,-15,8,.4); this.wall(0,15,24,.4); this.wall(-12,0,.4,30); this.wall(12,0,.4,30);
-      // Room divisions deliberately leave navigable door openings.
       this.wall(-4,4,.35,6); this.wall(-4,-8,.35,8); this.wall(4,4,.35,6); this.wall(4,-8,.35,8);
       this.wall(-8,7,8,.35); this.wall(8,7,8,.35); this.wall(-8,-1,8,.35); this.wall(8,-1,8,.35);
       this.wall(-8,-12,8,.35); this.wall(8,-12,8,.35);
@@ -188,19 +188,20 @@
       $('select-quality').value=this.quality;$('select-quality').addEventListener('change',e=>{this.quality=e.target.value;localStorage.setItem('hw_quality',this.quality);this.applyQuality();});
       $('slider-sens').value=this.sensitivity;$('slider-sens').addEventListener('input',e=>{this.sensitivity=parseFloat(e.target.value);localStorage.setItem('hw_sens',String(this.sensitivity));});
       $('btn-mobile-interact').addEventListener('pointerdown',e=>{e.preventDefault();this.interactNow();});$('btn-mobile-flash').addEventListener('pointerdown',e=>{e.preventDefault();this.toggleLight();});
-      const run=$('btn-mobile-run');run.addEventListener('pointerdown',e=>{e.preventDefault();this.mobileRun=true;});['pointerup','pointercancel','pointerleave'].forEach(ev=>run.addEventListener(ev,()=>this.mobileRun=false));
+      const run=$('btn-mobile-run');run.addEventListener('pointerdown',e=>{e.preventDefault();this.mobileRun=true;});['pointerup','pointercancel','pointerleave'].forEach(ev=>run.addEventListener(ev,e=>{e.preventDefault();this.mobileRun=false;}));
     }
-    interactNow(){if(this.current)this.current.action();}
     setupMobile(){
-      const zone=$('joystick-zone'),thumb=$('joystick-thumb');let id=null,sx=0,sy=0;const max=42;
-      const reset=()=>{id=null;this.joy.x=0;this.joy.y=0;thumb.style.transform='translate(0,0)';};
-      zone.addEventListener('pointerdown',e=>{if(id!==null)return;e.preventDefault();zone.setPointerCapture?.(e.pointerId);id=e.pointerId;sx=e.clientX;sy=e.clientY;});
-      zone.addEventListener('pointermove',e=>{if(e.pointerId!==id)return;e.preventDefault();let dx=e.clientX-sx,dy=e.clientY-sy,d=Math.hypot(dx,dy);if(d>max){dx=dx/d*max;dy=dy/d*max;}thumb.style.transform=`translate(${dx}px,${dy}px)`;this.joy.x=dx/max;this.joy.y=dy/max;});
-      zone.addEventListener('pointerup',reset);zone.addEventListener('pointercancel',reset);zone.addEventListener('lostpointercapture',reset);
-      const look=$('touch-look-zone');let lid=null,lx=0,ly=0;look.addEventListener('pointerdown',e=>{if(!this.isMobileDevice())return;e.preventDefault();look.setPointerCapture?.(e.pointerId);lid=e.pointerId;lx=e.clientX;ly=e.clientY;});
-      look.addEventListener('pointermove',e=>{if(e.pointerId!==lid)return;e.preventDefault();const dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;this.look.yaw-=dx*.005*this.sensitivity;this.look.pitch=clamp(this.look.pitch-dy*.005*this.sensitivity,-1.35,1.35);});look.addEventListener('pointerup',()=>lid=null);look.addEventListener('pointercancel',()=>lid=null);
+      const zone=$('joystick-zone'),base=$('joystick-base'),thumb=$('joystick-thumb'),lookZone=$('touch-look-zone');let joyId=null,lookId=null,lastX=0,lastY=0;
+      zone.addEventListener('pointerdown',e=>{if(joyId!==null)return;joyId=e.pointerId;zone.setPointerCapture?.(e.pointerId);this.joy.x=0;this.joy.y=0;});
+      zone.addEventListener('pointermove',e=>{if(e.pointerId!==joyId)return;const r=base.getBoundingClientRect(),max=r.width*.34;let x=e.clientX-(r.left+r.width/2),y=e.clientY-(r.top+r.height/2),len=Math.hypot(x,y);if(len>max){x=x/len*max;y=y/len*max;}this.joy.x=x/max;this.joy.y=y/max;thumb.style.transform=`translate(${x}px,${y}px)`;});
+      const endJoy=e=>{if(e.pointerId!==joyId)return;joyId=null;this.joy.x=0;this.joy.y=0;thumb.style.transform='translate(0,0)';};zone.addEventListener('pointerup',endJoy);zone.addEventListener('pointercancel',endJoy);
+      lookZone.addEventListener('pointerdown',e=>{if(lookId!==null)return;lookId=e.pointerId;lookZone.setPointerCapture?.(e.pointerId);lastX=e.clientX;lastY=e.clientY;});
+      lookZone.addEventListener('pointermove',e=>{if(e.pointerId!==lookId)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;this.look.yaw-=dx*.008*this.sensitivity;this.look.pitch=clamp(this.look.pitch-dy*.008*this.sensitivity,-1.35,1.35);});
+      const endLook=e=>{if(e.pointerId!==lookId)return;lookId=null;};lookZone.addEventListener('pointerup',endLook);lookZone.addEventListener('pointercancel',endLook);
     }
-    start(){const loop=()=>{requestAnimationFrame(loop);const dt=Math.min(this.clock.getDelta(),.05);this.updatePlayer(dt);this.updateInteraction(dt);this.updateEntity(dt);this.updateLights();this.updateHUD();this.renderer.render(this.scene,this.camera);};loop();}
+    interactNow(){if(this.current&&this.state==='PLAYING')this.current.action();}
+    loop(){requestAnimationFrame(()=>this.loop());const dt=Math.min(.05,this.clock.getDelta());if(this.state==='PLAYING'){this.updatePlayer(dt);this.updateInteraction(dt);this.updateEntity(dt);this.updateLights();this.updateHUD();}this.renderer.render(this.scene,this.camera);}
+    start(){this.loop();}
   }
-  addEventListener('DOMContentLoaded',()=>{window.houseGame=new HouseGame();window.houseGame.start();});
+  window.addEventListener('load',()=>{const game=new HouseGame();game.start();});
 })();
