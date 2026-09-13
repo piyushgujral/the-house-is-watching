@@ -1,42 +1,773 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js';
+/**
+ * THE HOUSE IS WATCHING - Engine 8.0 Master Implementation
+ * Single-player / Future-MP Architecture
+ */
 
-const $=id=>document.getElementById(id);
-const mobile=matchMedia('(pointer:coarse)').matches||innerWidth<800;
-const g={start:false,fuse:false,key:false,doll:false,win:false,dead:false,light:true,battery:100,run:false,stamina:100,fear:8,zone:0};
-const keys={};const joy={x:0,y:0};let yaw=0,pitch=0,look=null,last=performance.now(),lastHud=0,lastAi=0,shake=0;
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x020202);scene.fog=new THREE.FogExp2(0x080706,.045);
-const cam=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.05,70);cam.position.set(0,1.62,8.2);cam.rotation.order='YXZ';
-const renderer=new THREE.WebGLRenderer({antialias:!mobile,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1:1.25));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.shadowMap.enabled=!mobile;renderer.shadowMap.type=THREE.BasicShadowMap;$('scene').appendChild(renderer.domElement);
-const W=new THREE.MeshStandardMaterial({color:0x28221c,roughness:1}),F=new THREE.MeshStandardMaterial({color:0x120d09,roughness:1}),D=new THREE.MeshStandardMaterial({color:0x090807,roughness:1}),WOOD=new THREE.MeshStandardMaterial({color:0x38200f,roughness:.92}),METAL=new THREE.MeshStandardMaterial({color:0xb9b5a8,metalness:.35,roughness:.45}),GOLD=new THREE.MeshStandardMaterial({color:0xc89d3d,metalness:.55,roughness:.3}),BLACK=new THREE.MeshStandardMaterial({color:0x010101,roughness:1});
-const solids=[],items=[],lights=[];
-function cube(name,x,y,z,w,h,d,mat,solid=false,parent=scene){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);o.name=name;o.position.set(x,y,z);o.castShadow=!mobile;o.receiveShadow=!mobile;parent.add(o);if(solid)solids.push({x,z,w,d});return o}
-for(const z of [7,0,-7,-14,-21]){cube('floor',0,-.1,z,7.5,.2,7,F);cube('ceiling',0,3.5,z,7.5,.2,7,D)}
-for(const z of [7,0,-7]){cube('wallL',-3.75,1.75,z,.2,3.5,7,W,true);cube('wallR',3.75,1.75,z,.2,3.5,7,W,true)}
-for(const z of [-14,-21]){cube('wallL',-4.45,1.75,z,.2,3.5,7,W,true);cube('wallR',4.45,1.75,z,.2,3.5,7,W,true)}
-cube('front',0,1.75,10.5,7.5,3.5,.2,W,true);cube('end',0,1.75,-24.5,9,3.5,.2,W,true);
-function door(z,w=2.5){cube('doorTop',0,2.9,z,w+.4,.2,.3,WOOD);cube('doorL',-w/2,1.45,z,.18,2.9,.3,WOOD);cube('doorR',w/2,1.45,z,.18,2.9,.3,WOOD)}[3.5,-3.5,-10.5,-17.5].forEach(door);
-cube('sofa',-2.2,.65,5.8,2.3,1.1,1.1,WOOD,true);cube('table',-2.1,.65,-1.7,2.3,1.1,1.1,WOOD,true);cube('wardrobe',2.2,1.4,-8.2,1.3,2.8,.8,WOOD,true);cube('bed',-2,.55,-15,3,.8,2,WOOD,true);cube('cabinet',2.1,1.35,-20.2,1.2,2.7,.8,WOOD,true);
-for(const z of [7,0,-7,-14,-21]){const l=new THREE.PointLight(0xd2aa70,1.0,6);l.position.set(0,3,z);l.castShadow=!mobile;if(!mobile)l.shadow.mapSize.set(128,128);scene.add(l);lights.push(l);cube('bulb',0,3.08,z,.1,.1,.1,new THREE.MeshBasicMaterial({color:0xffd79c}))}
-scene.add(new THREE.HemisphereLight(0x4a4742,0x030201,.28));
-function makeItem(x,y,z,mat,type){const o=cube(type,x,y,z,.42,.42,.32,mat);o.userData.type=type;o.userData.baseY=y;items.push(o);return o}
-const fuse=makeItem(2.2,1.65,5.7,METAL,'fuse');const key=makeItem(-2.1,1.25,-1.7,GOLD,'key');key.visible=false;const doll=makeItem(2.15,.8,-13.7,WOOD,'doll');doll.visible=false;const exit=cube('exit',0,1.5,-24.15,2.5,3,.2,BLACK);exit.userData.type='exit';items.push(exit);
-const watcher=new THREE.Group();const body=new THREE.Mesh(new THREE.BoxGeometry(.8,2.4,.5),BLACK);body.position.y=1.2;watcher.add(body);const head=new THREE.Mesh(new THREE.SphereGeometry(.4,10,8),BLACK);head.position.y=2.6;watcher.add(head);for(const x of [-.14,.14]){const e=new THREE.Mesh(new THREE.SphereGeometry(.045,6,6),new THREE.MeshBasicMaterial({color:0xffffff}));e.position.set(x,2.64,-.36);watcher.add(e)}scene.add(watcher);watcher.visible=false;
-const target=new THREE.Object3D();target.position.set(0,0,-15);cam.add(target);const flash=new THREE.SpotLight(0xfff4dc,7,20,Math.PI/7,.6,1.2);flash.castShadow=!mobile;if(!mobile)flash.shadow.mapSize.set(256,256);cam.add(flash);flash.target=target;scene.add(cam);
-const ray=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
-function hud(force=false){const now=performance.now();if(!force&&now-lastHud<150)return;lastHud=now;const f=Math.round(g.fear),b=Math.round(g.battery);$('fear').textContent=f+'%';$('fearBar').style.width=f+'%';$('batteryBar').style.width=b+'%';$('objective').textContent=!g.fuse?'Find the fuse.':!g.key?'Find the house key.':!g.doll?'Find the watcher doll.':'Escape through the front door.';$('inventory').textContent=g.doll?'WATCHER DOLL':g.key?'HOUSE KEY':g.fuse?'FUSE':'EMPTY HANDS';[['checkFuse',g.fuse],['checkKey',g.key],['checkDoll',g.doll],['checkEscape',g.win]].forEach(([id,v])=>$(id)?.classList.toggle('done',v));}
-function msg(t){const s=$('status');if(s){s.textContent=t;clearTimeout(msg.t);msg.t=setTimeout(()=>s.textContent='READY',1800)}}
-function flashlight(on){g.light=!!on&&g.battery>0;flash.visible=g.light}
-function start(){if(g.start)return;g.start=true;$('boot').classList.add('hidden');flashlight(true);msg('Find the fuse.');hud(true)}
-$('startBtn')?.addEventListener('pointerdown',e=>{e.preventDefault();start()});
-function blocked(x,z){if(x<-3.35||x>3.35)return true;for(const c of solids){if(x>c.x-c.w/2-.28&&x<c.x+c.w/2+.28&&z>c.z-c.d/2-.28&&z<c.z+c.d/2+.28)return true}return false}
-function move(dt){if(!g.start||g.dead||g.win)return;let x=(keys.d?1:0)-(keys.a?1:0)+(keys.arrowright?1:0)-(keys.arrowleft?1:0)+joy.x;let z=(keys.s?1:0)-(keys.w?1:0)+(keys.arrowdown?1:0)-(keys.arrowup?1:0);const n=Math.hypot(x,z);if(n<.05){g.stamina=Math.min(100,g.stamina+dt*24);return}x/=n;z/=n;const sprint=g.run&&g.stamina>1;const speed=sprint?4.6:2.35;if(sprint)g.stamina=Math.max(0,g.stamina-dt*34);else g.stamina=Math.min(100,g.stamina+dt*20);const dx=(Math.cos(yaw)*x+Math.sin(yaw)*z)*speed*dt,dz=(-Math.sin(yaw)*x+Math.cos(yaw)*z)*speed*dt;const nx=cam.position.x+dx,nz=cam.position.z+dz;if(!blocked(nx,cam.position.z))cam.position.x=nx;if(!blocked(cam.position.x,nz))cam.position.z=nz;g.zone=Math.max(0,Math.min(4,Math.floor((8-cam.position.z)/7)))}
-function interact(){if(!g.start||g.dead||g.win)return;ray.setFromCamera(center,cam);const hit=ray.intersectObjects(items,false).find(v=>v.distance<3.2);if(!hit){msg('Look directly at something.');return}const t=hit.object.userData.type;if(t==='fuse'&&!g.fuse){g.fuse=true;fuse.visible=false;key.visible=true;watcher.visible=true;watcher.position.set(-2,1,-1);g.fear=Math.min(100,g.fear+10);lights.forEach(l=>l.intensity=.55);msg('POWER RESTORED. Something moved.')}else if(t==='key'&&g.fuse&&!g.key){g.key=true;key.visible=false;doll.visible=true;watcher.visible=false;g.fear=Math.min(100,g.fear+12);msg('THE KEY WAS MOVED. Find the doll.')}else if(t==='doll'&&g.key&&!g.doll){g.doll=true;doll.visible=false;watcher.visible=true;watcher.position.set(0,1,-18);g.fear=Math.min(100,g.fear+20);msg('RUN. THE FRONT DOOR IS OPEN.')}else if(t==='exit'&&g.fuse&&g.key&&g.doll){g.win=true;$('win').classList.remove('hidden');msg('YOU ESCAPED.')}else if(t==='exit')msg('Locked. Find everything first.');hud(true)}
-function toggleLight(){if(!g.start||g.dead)return;if(g.light){flashlight(false);msg('FLASHLIGHT OFF')}else if(g.battery>0){flashlight(true);msg('FLASHLIGHT ON')}else msg('BATTERY EMPTY')}
-function ai(dt,now){if(!watcher.visible)return;const dx=cam.position.x-watcher.position.x,dz=cam.position.z-watcher.position.z,d=Math.hypot(dx,dz);if(d>0.01)watcher.rotation.y=Math.atan2(dx,dz);if(!g.doll){if(d<4.5&&now-lastAi>3500){g.fear=Math.min(100,g.fear+8);lastAi=now;msg('DON’T TURN AROUND.')}return}if(d>1.15){const step=Math.min(d-.8,dt*(g.run?1.7:1.25));watcher.position.x+=dx/d*step;watcher.position.z+=dz/d*step}if(d<3.2)g.fear=Math.min(100,g.fear+dt*(d<1.8?13:5));if(d<1){g.dead=true;$('death').classList.remove('hidden');msg('IT FOUND YOU')}}
-function tick(now){const dt=Math.min(.045,(now-last)/1000);last=now;if(g.start&&!g.dead&&!g.win){move(dt);if(g.light){g.battery=Math.max(0,g.battery-dt*.85);if(g.battery<=0){flashlight(false);msg('FLASHLIGHT BATTERY EMPTY')}}ai(dt,now);if(g.fuse)g.fear=Math.min(100,g.fear+dt*.008);if(g.fear>=100){g.dead=true;$('death').classList.remove('hidden')}}if(g.start&&g.light&&mobile&&Math.random()<dt*.25)shake=.015;shake=Math.max(0,shake-dt*.04);cam.position.y=1.62+shake*(Math.random()-.5);hud();renderer.render(scene,cam);requestAnimationFrame(tick)}
-addEventListener('keydown',e=>{const q=e.key.toLowerCase();keys[q]=true;if(q==='f')toggleLight();if(q==='e'||q==='enter')interact();if(q==='shift')g.run=true});addEventListener('keyup',e=>{const q=e.key.toLowerCase();keys[q]=false;if(q==='shift')g.run=false});
-function runHold(id){const b=$(id);if(!b)return;const down=e=>{e.preventDefault();g.run=true;b.setPointerCapture?.(e.pointerId)},up=e=>{e.preventDefault();g.run=false};b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('lostpointercapture',up)}
-runHold('runBtn');$('lightBtn')?.addEventListener('pointerdown',e=>{e.preventDefault();toggleLight()});$('interactBtn')?.addEventListener('pointerdown',e=>{e.preventDefault();interact()});$('retryBtn')?.addEventListener('pointerdown',()=>location.reload());$('againBtn')?.addEventListener('pointerdown',()=>location.reload());
-const base=$('joystick'),stick=$('stick');let joyPointer=null;function resetJoy(){joy.x=0;joy.y=0;if(stick)stick.style.transform='translate(-50%,-50%)'}if(base&&stick){base.addEventListener('pointerdown',e=>{e.preventDefault();joyPointer=e.pointerId;base.setPointerCapture(e.pointerId);updateJoy(e)});base.addEventListener('pointermove',e=>{if(e.pointerId===joyPointer)updateJoy(e)});base.addEventListener('pointerup',e=>{if(e.pointerId===joyPointer){joyPointer=null;resetJoy()}});base.addEventListener('pointercancel',e=>{if(e.pointerId===joyPointer){joyPointer=null;resetJoy()}})}function updateJoy(e){const r=base.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,max=r.width*.34;let dx=e.clientX-cx,dy=e.clientY-cy;const n=Math.hypot(dx,dy);if(n>max){dx=dx/n*max;dy=dy/n*max}joy.x=dx/max;joy.y=dy/max;stick.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`}
-renderer.domElement.addEventListener('pointerdown',e=>{if(!g.start||e.target.closest('button')||e.target.closest('#joystick'))return;look={id:e.pointerId,x:e.clientX,y:e.clientY};renderer.domElement.setPointerCapture?.(e.pointerId)});renderer.domElement.addEventListener('pointermove',e=>{if(!look||e.pointerId!==look.id)return;yaw-=(e.clientX-look.x)*.004;pitch-=(e.clientY-look.y)*.004;pitch=Math.max(-1.15,Math.min(1.15,pitch));cam.rotation.set(pitch,yaw,0);look.x=e.clientX;look.y=e.clientY});renderer.domElement.addEventListener('pointerup',()=>look=null);renderer.domElement.addEventListener('pointercancel',()=>look=null);renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
-addEventListener('resize',()=>{cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1:1.25))});hud(true);requestAnimationFrame(tick);
+(function () {
+  'use strict';
+
+  // --- AUDIO SYSTEM (Web Audio API Synthesizer) ---
+  class ProceduralAudioEngine {
+    constructor() {
+      this.ctx = null;
+      this.masterGain = null;
+      this.ambientNode = null;
+    }
+
+    init() {
+      if (this.ctx) return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      this.ctx = new AudioCtx();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+      this.masterGain.connect(this.ctx.destination);
+      this.startAmbientDrones();
+    }
+
+    startAmbientDrones() {
+      if (!this.ctx) return;
+      // Low drone (house rumble)
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(45, this.ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start();
+    }
+
+    playFootstep() {
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(70 + Math.random() * 20, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.13);
+    }
+
+    playDoorCreak() {
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(190, this.ctx.currentTime + 0.4);
+      gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.52);
+    }
+
+    playStinger() {
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.6);
+      gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.7);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.7);
+    }
+
+    playHeartbeat(rateMod = 1.0) {
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(55, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(25, this.ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.4 * rateMod, this.ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.18);
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.2);
+    }
+  }
+
+  // --- PROCEDURAL TEXTURE GENERATOR ---
+  function createWallTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#22201e';
+    ctx.fillRect(0, 0, 256, 256);
+    // Noise & stains
+    for (let i = 0; i < 400; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? '#1a1816' : '#2b2926';
+      ctx.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 4, 10 + Math.random() * 15);
+    }
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  function createFloorTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#1e1610';
+    ctx.fillRect(0, 0, 256, 256);
+    // Wood plank lines
+    ctx.strokeStyle = '#0e0b08';
+    ctx.lineWidth = 3;
+    for (let y = 0; y < 256; y += 32) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(256, y);
+      ctx.stroke();
+    }
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  // --- GAME ENGINE CLASS ---
+  class HouseGame {
+    constructor() {
+      this.container = document.getElementById('game-container');
+      this.audio = new ProceduralAudioEngine();
+      this.state = 'START'; // START, PLAYING, DEAD, WON
+
+      // Settings
+      this.quality = 'medium';
+      this.sensitivity = 1.2;
+
+      // Stats
+      this.fear = 0;
+      this.stamina = 100;
+      this.isSprinting = false;
+      this.battery = 100;
+      this.flashlightOn = true;
+
+      // Objectives & Items
+      this.objectivePhase = 1;
+      this.inventory = [];
+      this.doors = {};
+
+      // Core Loop Timing
+      this.clock = new THREE.Clock();
+      this.lastHeartbeat = 0;
+      this.lastStepTime = 0;
+
+      // Inputs
+      this.keys = {};
+      this.mouseLook = { yaw: 0, pitch: 0 };
+      this.isPointerLocked = false;
+      this.joystickDelta = { x: 0, y: 0 };
+
+      // Physics / Collision
+      this.colliders = [];
+      this.interactiveObjects = [];
+      this.playerRadius = 0.45;
+
+      this.initThree();
+      this.buildHouse();
+      this.initEntity();
+      this.bindEvents();
+      this.setupMobile();
+      this.updateObjectivesUI();
+    }
+
+    initThree() {
+      this.scene = new THREE.Scene();
+      this.scene.fog = new THREE.FogExp2(0x050507, 0.12);
+
+      this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 50);
+      this.playerPos = new THREE.Vector3(0, 1.6, 12); // Entrance
+      this.camera.position.copy(this.playerPos);
+
+      this.renderer = new THREE.WebGLRenderer({ antialias: this.quality === 'high' });
+      this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.quality === 'low' ? 1 : 1.5));
+      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = 0.9;
+      this.container.appendChild(this.renderer.domElement);
+
+      // Flashlight attached to camera
+      this.flashlight = new THREE.SpotLight(0xffecd0, 2.5, 14, Math.PI / 6, 0.4, 1.2);
+      this.flashlightTarget = new THREE.Object3D();
+      this.scene.add(this.flashlightTarget);
+      this.flashlight.target = this.flashlightTarget;
+      this.scene.add(this.flashlight);
+
+      // Low Ambient
+      this.ambientLight = new THREE.AmbientLight(0x111116, 0.2);
+      this.scene.add(this.ambientLight);
+
+      // Overhead flicker bulbs (dormant until power restored)
+      this.hallwayLight = new THREE.PointLight(0xffb070, 0, 8);
+      this.hallwayLight.position.set(0, 2.7, 4);
+      this.scene.add(this.hallwayLight);
+    }
+
+    buildHouse() {
+      const wallMat = new THREE.MeshStandardMaterial({
+        map: createWallTexture(),
+        roughness: 0.85
+      });
+      const floorMat = new THREE.MeshStandardMaterial({
+        map: createFloorTexture(),
+        roughness: 0.7
+      });
+      const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x18181a, roughness: 0.9 });
+
+      // Ground Floor
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(24, 30), floorMat);
+      floor.rotation.x = -Math.PI / 2;
+      this.scene.add(floor);
+
+      const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(24, 30), ceilingMat);
+      ceiling.position.y = 3.0;
+      ceiling.rotation.x = Math.PI / 2;
+      this.scene.add(ceiling);
+
+      // Helper to spawn walls with bounding box collision
+      const addWall = (x, z, w, d, h = 3.0) => {
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+        wall.position.set(x, h / 2, z);
+        this.scene.add(wall);
+        this.colliders.push(new THREE.Box3().setFromObject(wall));
+        return wall;
+      };
+
+      // Outer Shell
+      addWall(0, -15, 24, 0.4); // North back wall
+      addWall(0, 15, 24, 0.4);  // South front wall
+      addWall(-12, 0, 0.4, 30); // West wall
+      addWall(12, 0, 0.4, 30);  // East wall
+
+      // Hallway & Rooms layout
+      // Main Entrance Hallway (center, z = 6 to 15)
+      addWall(-3, 10, 0.4, 10);
+      addWall(3, 10, 0.4, 10);
+
+      // Living Room (West, z = 4 to 14)
+      addWall(-7, 4, 10, 0.4);
+
+      // Kitchen / Dining (East, z = 4 to 14)
+      addWall(7, 4, 10, 0.4);
+
+      // Basement Corridor / Locked Door Area (z = -4 to 4)
+      addWall(-4, -4, 0.4, 8);
+      addWall(4, -4, 0.4, 8);
+
+      // Interactive Items
+      this.spawnInteractive('Fuse', new THREE.Vector3(-8, 0.8, 10), 0xffcc33, () => this.collectFuse());
+      this.spawnInteractive('Generator', new THREE.Vector3(8, 1.0, 10), 0x4488ff, () => this.activateGenerator());
+      this.spawnInteractive('BasementKey', new THREE.Vector3(-8, 0.5, -2), 0xddaa44, () => this.collectKey());
+      this.spawnInteractive('DollArtifact', new THREE.Vector3(0, 0.6, -12), 0xcc2222, () => this.collectArtifact());
+      this.spawnInteractive('ExitDoor', new THREE.Vector3(0, 1.2, 14.8), 0x88ff88, () => this.tryEscape());
+    }
+
+    spawnInteractive(id, pos, color, action) {
+      const mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.35, 0.35, 0.35),
+        new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.2 })
+      );
+      mesh.position.copy(pos);
+      this.scene.add(mesh);
+
+      this.interactiveObjects.push({ id, mesh, action });
+    }
+
+    initEntity() {
+      // The Entity: A tall, slender silhouette with pale reflective eyes
+      this.entityGroup = new THREE.Group();
+      const bodyMat = new THREE.MeshBasicMaterial({ color: 0x020202 });
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.15, 2.4, 8), bodyMat);
+      body.position.y = 1.2;
+      this.entityGroup.add(body);
+
+      // Eyes
+      const eyeMat = new THREE.MeshBasicMaterial({ color: 0xeeffff });
+      const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), eyeMat);
+      leftEye.position.set(-0.08, 2.2, 0.22);
+      const rightEye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), eyeMat);
+      rightEye.position.set(0.08, 2.2, 0.22);
+      this.entityGroup.add(leftEye);
+      this.entityGroup.add(rightEye);
+
+      this.entityGroup.position.set(0, 0, -8);
+      this.scene.add(this.entityGroup);
+
+      this.entity = {
+        state: 'STALKING', // STALKING, WATCHING, CHASE, DISAPPEARED
+        targetPos: new THREE.Vector3(0, 0, -8),
+        speed: 2.1,
+        aggression: 1.0,
+        seenTimer: 0
+      };
+    }
+
+    // --- GAMEPLAY LOOPS & OBJECTIVES ---
+    collectFuse() {
+      this.inventory.push('Fuse');
+      this.audio.playFootstep();
+      this.removeInteractive('Fuse');
+      this.objectivePhase = 2;
+      this.updateObjectivesUI('Bring the fuse to the East Wing Generator.');
+    }
+
+    activateGenerator() {
+      if (!this.inventory.includes('Fuse')) {
+        this.flashPrompt('REQUIRES FUSE');
+        return;
+      }
+      this.audio.playDoorCreak();
+      this.hallwayLight.intensity = 1.5;
+      this.objectivePhase = 3;
+      this.removeInteractive('Generator');
+      this.updateObjectivesUI('Power restored. Find the Basement Key in the Master Bedroom.');
+      this.entity.aggression = 1.6;
+      this.audio.playStinger();
+    }
+
+    collectKey() {
+      if (this.objectivePhase < 3) return;
+      this.inventory.push('BasementKey');
+      this.removeInteractive('BasementKey');
+      this.objectivePhase = 4;
+      this.updateObjectivesUI('Unlock the North Ritual room and take the Watcher Doll.');
+    }
+
+    collectArtifact() {
+      if (!this.inventory.includes('BasementKey')) {
+        this.flashPrompt('DOOR LOCKED');
+        return;
+      }
+      this.inventory.push('WatcherDoll');
+      this.removeInteractive('DollArtifact');
+      this.objectivePhase = 5;
+      this.updateObjectivesUI('IT IS ANGRY. RUN TO THE FRONT ENTRANCE ESCAPE!');
+      this.entity.state = 'CHASE';
+      this.entity.speed = 3.6;
+      this.audio.playStinger();
+    }
+
+    tryEscape() {
+      if (this.objectivePhase === 5 && this.inventory.includes('WatcherDoll')) {
+        this.triggerWin();
+      } else {
+        this.flashPrompt('THE DOOR WILL NOT BUDGE');
+      }
+    }
+
+    removeInteractive(id) {
+      const idx = this.interactiveObjects.findIndex(o => o.id === id);
+      if (idx !== -1) {
+        this.scene.remove(this.interactiveObjects[idx].mesh);
+        this.interactiveObjects.splice(idx, 1);
+      }
+      this.updateInventoryUI();
+    }
+
+    // --- ENTITY AI LOGIC ---
+    updateEntity(delta) {
+      if (this.state !== 'PLAYING') return;
+      const dist = this.playerPos.distanceTo(this.entityGroup.position);
+
+      // Check if player is pointing flashlight directly at entity
+      const dirToEntity = new THREE.Vector3().subVectors(this.entityGroup.position, this.playerPos).normalize();
+      const lookDir = new THREE.Vector3();
+      this.camera.getWorldDirection(lookDir);
+      const dot = lookDir.dot(dirToEntity);
+      const isObserved = dot > 0.85 && dist < 12 && this.flashlightOn;
+
+      // Fear mechanic
+      if (dist < 10) {
+        this.fear = Math.min(100, this.fear + (10 - dist) * 4.0 * delta);
+      } else {
+        this.fear = Math.max(0, this.fear - 3.5 * delta);
+      }
+
+      // State machine
+      switch (this.entity.state) {
+        case 'STALKING':
+          this.entityGroup.lookAt(this.playerPos.x, 0, this.playerPos.z);
+          if (isObserved) {
+            this.entity.seenTimer += delta;
+            if (this.entity.seenTimer > 0.7) {
+              // Disappear around corner
+              this.entityGroup.position.set(
+                this.playerPos.x + (Math.random() - 0.5) * 16,
+                0,
+                this.playerPos.z + (Math.random() - 0.5) * 16
+              );
+              this.entity.seenTimer = 0;
+            }
+          }
+          if (this.objectivePhase >= 3 && Math.random() < 0.005) {
+            this.entity.state = 'CHASE';
+          }
+          break;
+
+        case 'CHASE':
+          this.entityGroup.lookAt(this.playerPos.x, 0, this.playerPos.z);
+          const step = dirToEntity.multiplyScalar(this.entity.speed * delta);
+          this.entityGroup.position.add(step);
+
+          // Caught player
+          if (dist < 1.2) {
+            this.triggerDeath();
+          }
+          break;
+      }
+
+      // Light Flicker
+      if (this.hallwayLight.intensity > 0) {
+        this.hallwayLight.intensity = 1.2 + (Math.random() - 0.5) * 0.6;
+      }
+    }
+
+    // --- CONTROLS & MOVEMENT ---
+    updatePlayer(delta) {
+      if (this.state !== 'PLAYING') return;
+
+      // Handle Stamina & Sprint
+      const wantsRun = (this.keys['ShiftLeft'] || this.isMobileRunning) && this.stamina > 10;
+      this.isSprinting = wantsRun;
+      const moveSpeed = this.isSprinting ? 4.8 : 2.5;
+
+      if (this.isSprinting) {
+        this.stamina = Math.max(0, this.stamina - 18 * delta);
+      } else {
+        this.stamina = Math.min(100, this.stamina + 10 * delta);
+      }
+
+      // Camera Angles
+      this.camera.rotation.order = 'YXZ';
+      this.camera.rotation.y = this.mouseLook.yaw;
+      this.camera.rotation.x = this.mouseLook.pitch;
+
+      // Direction vectors
+      const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mouseLook.yaw);
+      const side = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mouseLook.yaw);
+
+      const move = new THREE.Vector3();
+      if (this.keys['KeyW']) move.add(forward);
+      if (this.keys['KeyS']) move.sub(forward);
+      if (this.keys['KeyD']) move.add(side);
+      if (this.keys['KeyA']) move.sub(side);
+
+      // Joystick contribution
+      if (Math.abs(this.joystickDelta.x) > 0.1 || Math.abs(this.joystickDelta.y) > 0.1) {
+        move.add(side.clone().multiplyScalar(this.joystickDelta.x));
+        move.add(forward.clone().multiplyScalar(-this.joystickDelta.y));
+      }
+
+      if (move.lengthSq() > 0) {
+        move.normalize().multiplyScalar(moveSpeed * delta);
+
+        // Simple Axis Collision Check
+        const nextX = this.playerPos.x + move.x;
+        const nextZ = this.playerPos.z + move.z;
+
+        if (!this.checkWallCollision(nextX, this.playerPos.z)) {
+          this.playerPos.x = nextX;
+        }
+        if (!this.checkWallCollision(this.playerPos.x, nextZ)) {
+          this.playerPos.z = nextZ;
+        }
+
+        // Footsteps
+        this.lastStepTime += delta * (this.isSprinting ? 1.6 : 1.0);
+        if (this.lastStepTime > 0.5) {
+          this.audio.playFootstep();
+          this.lastStepTime = 0;
+        }
+      }
+
+      // Headbob
+      const bob = move.lengthSq() > 0 ? Math.sin(this.clock.getElapsedTime() * (this.isSprinting ? 14 : 9)) * 0.04 : 0;
+      this.camera.position.set(this.playerPos.x, 1.6 + bob, this.playerPos.z);
+
+      // Flashlight follows camera
+      this.flashlight.position.copy(this.camera.position);
+      const flashDir = new THREE.Vector3();
+      this.camera.getWorldDirection(flashDir);
+      this.flashlightTarget.position.copy(this.camera.position).add(flashDir);
+
+      // Interaction Raycast
+      this.checkInteractionRay();
+    }
+
+    checkWallCollision(x, z) {
+      const pBox = new THREE.Box3(
+        new THREE.Vector3(x - this.playerRadius, 0.2, z - this.playerRadius),
+        new THREE.Vector3(x + this.playerRadius, 2.5, z + this.playerRadius)
+      );
+      for (let i = 0; i < this.colliders.length; i++) {
+        if (this.colliders[i].intersectsBox(pBox)) return true;
+      }
+      return false;
+    }
+
+    checkInteractionRay() {
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera({ x: 0, y: 0 }, this.camera);
+      const meshes = this.interactiveObjects.map(o => o.mesh);
+      const hits = ray.intersectObjects(meshes);
+
+      const prompt = document.getElementById('interaction-prompt');
+      if (hits.length > 0 && hits[0].distance < 2.5) {
+        this.currentInteractable = this.interactiveObjects.find(o => o.mesh === hits[0].object);
+        prompt.classList.remove('hidden');
+      } else {
+        this.currentInteractable = null;
+        prompt.classList.add('hidden');
+      }
+    }
+
+    triggerInteract() {
+      if (this.currentInteractable) {
+        this.currentInteractable.action();
+      }
+    }
+
+    // --- UI UPDATES & DEATH/WIN STATES ---
+    updateHUD() {
+      document.getElementById('stamina-bar-fill').style.width = `${this.stamina}%`;
+      document.getElementById('fear-bar-fill').style.width = `${this.fear}%`;
+
+      const vignette = document.getElementById('vignette');
+      const fearRatio = this.fear / 100;
+      vignette.style.boxShadow = `inset 0 0 ${100 + fearRatio * 120}px rgba(0,0,0,${0.85 + fearRatio * 0.15})`;
+
+      // Heartbeat audio at high fear
+      if (this.fear > 50 && this.clock.getElapsedTime() - this.lastHeartbeat > (1.2 - fearRatio * 0.7)) {
+        this.audio.playHeartbeat(fearRatio);
+        this.lastHeartbeat = this.clock.getElapsedTime();
+      }
+    }
+
+    updateObjectivesUI(text) {
+      if (text) document.getElementById('objective-text').innerText = text;
+    }
+
+    updateInventoryUI() {
+      for (let i = 0; i < 3; i++) {
+        const slot = document.getElementById(`inv-slot-${i}`);
+        slot.innerText = this.inventory[i] ? this.inventory[i] : 'EMPTY';
+      }
+    }
+
+    flashPrompt(msg) {
+      const prompt = document.getElementById('interaction-prompt');
+      const label = document.getElementById('interaction-label');
+      label.innerText = msg;
+      prompt.classList.remove('hidden');
+      setTimeout(() => {
+        label.innerText = 'INTERACT';
+        prompt.classList.add('hidden');
+      }, 1200);
+    }
+
+    triggerDeath() {
+      this.state = 'DEAD';
+      document.exitPointerLock?.();
+      document.getElementById('hud').classList.add('hidden');
+      document.getElementById('death-screen').classList.remove('hidden');
+      this.audio.playStinger();
+    }
+
+    triggerWin() {
+      this.state = 'WON';
+      document.exitPointerLock?.();
+      document.getElementById('hud').classList.add('hidden');
+      document.getElementById('victory-screen').classList.remove('hidden');
+    }
+
+    // --- INPUT & EVENT LISTENERS ---
+    bindEvents() {
+      window.addEventListener('resize', () => {
+        this.camera.aspect = window.innerWidth / window.innerHeight;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // Desktop keyboard
+      window.addEventListener('keydown', e => {
+        this.keys[e.code] = true;
+        if (e.code === 'KeyE') this.triggerInteract();
+        if (e.code === 'KeyF') {
+          this.flashlightOn = !this.flashlightOn;
+          this.flashlight.intensity = this.flashlightOn ? 2.5 : 0;
+        }
+      });
+      window.addEventListener('keyup', e => {
+        this.keys[e.code] = false;
+      });
+
+      // Desktop Pointer Lock
+      this.container.addEventListener('click', () => {
+        if (this.state === 'PLAYING' && !this.isMobileDevice()) {
+          this.container.requestPointerLock();
+        }
+      });
+
+      document.addEventListener('pointerlockchange', () => {
+        this.isPointerLocked = document.pointerLockElement === this.container;
+      });
+
+      document.addEventListener('mousemove', e => {
+        if (!this.isPointerLocked) return;
+        const factor = 0.002 * this.sensitivity;
+        this.mouseLook.yaw -= e.movementX * factor;
+        this.mouseLook.pitch -= e.movementY * factor;
+        this.mouseLook.pitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.mouseLook.pitch));
+      });
+
+      // Start Button
+      document.getElementById('btn-play').addEventListener('click', () => {
+        this.audio.init();
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('hud').classList.remove('hidden');
+        this.state = 'PLAYING';
+        if (!this.isMobileDevice()) {
+          this.container.requestPointerLock();
+        } else {
+          document.getElementById('mobile-controls').classList.remove('hidden');
+        }
+      });
+
+      document.getElementById('btn-restart-death').addEventListener('click', () => location.reload());
+      document.getElementById('btn-restart-victory').addEventListener('click', () => location.reload());
+
+      document.getElementById('btn-how-to').addEventListener('click', () => {
+        document.getElementById('modal-howto').classList.remove('hidden');
+      });
+      document.getElementById('btn-close-howto').addEventListener('click', () => {
+        document.getElementById('modal-howto').classList.add('hidden');
+      });
+    }
+
+    setupMobile() {
+      const joystickZone = document.getElementById('joystick-zone');
+      const thumb = document.getElementById('joystick-thumb');
+      const maxR = 40;
+      let touchId = null;
+      let startX = 0, startY = 0;
+
+      joystickZone.addEventListener('touchstart', e => {
+        e.preventDefault();
+        const t = e.changedTouches[0];
+        touchId = t.identifier;
+        startX = t.clientX;
+        startY = t.clientY;
+      });
+
+      joystickZone.addEventListener('touchmove', e => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const t = e.changedTouches[i];
+          if (t.identifier === touchId) {
+            let dx = t.clientX - startX;
+            let dy = t.clientY - startY;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > maxR) {
+              dx = (dx / dist) * maxR;
+              dy = (dy / dist) * maxR;
+            }
+            thumb.style.transform = `translate(${dx}px, ${dy}px)`;
+            this.joystickDelta.x = dx / maxR;
+            this.joystickDelta.y = dy / maxR;
+          }
+        }
+      });
+
+      const resetJoy = () => {
+        touchId = null;
+        thumb.style.transform = `translate(0px, 0px)`;
+        this.joystickDelta = { x: 0, y: 0 };
+      };
+      joystickZone.addEventListener('touchend', resetJoy);
+      joystickZone.addEventListener('touchcancel', resetJoy);
+
+      // Touch Look (Right side of screen)
+      const lookZone = document.getElementById('touch-look-zone');
+      let lookTouchId = null;
+      let lastLookX = 0, lastLookY = 0;
+
+      lookZone.addEventListener('touchstart', e => {
+        const t = e.changedTouches[0];
+        lookTouchId = t.identifier;
+        lastLookX = t.clientX;
+        lastLookY = t.clientY;
+      });
+
+      lookZone.addEventListener('touchmove', e => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const t = e.changedTouches[i];
+          if (t.identifier === lookTouchId) {
+            const dx = t.clientX - lastLookX;
+            const dy = t.clientY - lastLookY;
+            lastLookX = t.clientX;
+            lastLookY = t.clientY;
+
+            const factor = 0.005 * this.sensitivity;
+            this.mouseLook.yaw -= dx * factor;
+            this.mouseLook.pitch -= dy * factor;
+            this.mouseLook.pitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.mouseLook.pitch));
+          }
+        }
+      });
+
+      // Mobile Buttons
+      document.getElementById('btn-mobile-interact').addEventListener('touchstart', e => {
+        e.preventDefault();
+        this.triggerInteract();
+      });
+
+      document.getElementById('btn-mobile-flash').addEventListener('touchstart', e => {
+        e.preventDefault();
+        this.flashlightOn = !this.flashlightOn;
+        this.flashlight.intensity = this.flashlightOn ? 2.5 : 0;
+      });
+
+      const runBtn = document.getElementById('btn-mobile-run');
+      runBtn.addEventListener('touchstart', e => {
+        e.preventDefault();
+        this.isMobileRunning = true;
+      });
+      runBtn.addEventListener('touchend', () => { this.isMobileRunning = false; });
+    }
+
+    isMobileDevice() {
+      return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 850;
+    }
+
+    // --- MAIN LOOP ---
+    start() {
+      const animate = () => {
+        requestAnimationFrame(animate);
+        const delta = Math.min(this.clock.getDelta(), 0.1);
+
+        this.updatePlayer(delta);
+        this.updateEntity(delta);
+        this.updateHUD();
+
+        this.renderer.render(this.scene, this.camera);
+      };
+      animate();
+    }
+  }
+
+  // Boot on DOM Ready
+  window.addEventListener('DOMContentLoaded', () => {
+    const game = new HouseGame();
+    game.start();
+  });
+})();
