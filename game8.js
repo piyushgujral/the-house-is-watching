@@ -1,17 +1,19 @@
 /**
- * THE HOUSE IS WATCHING - Engine 8.0 Master Implementation
- * Single-player / Future-MP Architecture
+ * THE HOUSE IS WATCHING - Engine 8.0 Master Architecture
+ * Repository: piyushgujral/the-house-is-watching
+ * Platforms: Desktop (WASD + Mouse) & Mobile (Dual Touch Joystick / Drag Look)
  */
 
 (function () {
   'use strict';
 
-  // --- AUDIO SYSTEM (Web Audio API Synthesizer) ---
+  // --- 1. PROCEDURAL AUDIO SYNTHESIZER ---
   class ProceduralAudioEngine {
     constructor() {
       this.ctx = null;
       this.masterGain = null;
-      this.ambientNode = null;
+      this.ambientGain = null;
+      this.isMuted = false;
     }
 
     init() {
@@ -20,21 +22,20 @@
       if (!AudioCtx) return;
       this.ctx = new AudioCtx();
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.setValueAtTime(0.8, this.ctx.currentTime);
+      this.masterGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
       this.masterGain.connect(this.ctx.destination);
       this.startAmbientDrones();
     }
 
     startAmbientDrones() {
       if (!this.ctx) return;
-      // Low drone (house rumble)
       const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
+      this.ambientGain = this.ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(45, this.ctx.currentTime);
-      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
-      osc.connect(gain);
-      gain.connect(this.masterGain);
+      osc.frequency.setValueAtTime(42, this.ctx.currentTime);
+      this.ambientGain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+      osc.connect(this.ambientGain);
+      this.ambientGain.connect(this.masterGain);
       osc.start();
     }
 
@@ -43,9 +44,9 @@
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(70 + Math.random() * 20, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+      osc.frequency.setValueAtTime(65 + Math.random() * 20, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(12, this.ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
       gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
       osc.connect(gain);
       gain.connect(this.masterGain);
@@ -58,9 +59,9 @@
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(120, this.ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(190, this.ctx.currentTime + 0.4);
-      gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+      osc.frequency.setValueAtTime(110, this.ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(180, this.ctx.currentTime + 0.45);
+      gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.5);
       osc.connect(gain);
       gain.connect(this.masterGain);
@@ -73,14 +74,14 @@
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(600, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.6);
-      gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+      osc.frequency.setValueAtTime(550, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(70, this.ctx.currentTime + 0.65);
+      gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.7);
       osc.connect(gain);
       gain.connect(this.masterGain);
       osc.start();
-      osc.stop(this.ctx.currentTime + 0.7);
+      osc.stop(this.ctx.currentTime + 0.72);
     }
 
     playHeartbeat(rateMod = 1.0) {
@@ -88,9 +89,9 @@
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(55, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(25, this.ctx.currentTime + 0.15);
-      gain.gain.setValueAtTime(0.4 * rateMod, this.ctx.currentTime);
+      osc.frequency.setValueAtTime(58, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(22, this.ctx.currentTime + 0.16);
+      gain.gain.setValueAtTime(Math.min(0.6, 0.3 * rateMod), this.ctx.currentTime);
       gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.18);
       osc.connect(gain);
       gain.connect(this.masterGain);
@@ -99,18 +100,17 @@
     }
   }
 
-  // --- PROCEDURAL TEXTURE GENERATOR ---
+  // --- 2. PROCEDURAL TEXTURES ---
   function createWallTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 256;
     canvas.height = 256;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#22201e';
+    ctx.fillStyle = '#1e1c1b';
     ctx.fillRect(0, 0, 256, 256);
-    // Noise & stains
-    for (let i = 0; i < 400; i++) {
-      ctx.fillStyle = Math.random() > 0.5 ? '#1a1816' : '#2b2926';
-      ctx.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 4, 10 + Math.random() * 15);
+    for (let i = 0; i < 450; i++) {
+      ctx.fillStyle = Math.random() > 0.5 ? '#151413' : '#262422';
+      ctx.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 3, 8 + Math.random() * 12);
     }
     return new THREE.CanvasTexture(canvas);
   }
@@ -120,10 +120,9 @@
     canvas.width = 256;
     canvas.height = 256;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#1e1610';
+    ctx.fillStyle = '#1b140f';
     ctx.fillRect(0, 0, 256, 256);
-    // Wood plank lines
-    ctx.strokeStyle = '#0e0b08';
+    ctx.strokeStyle = '#090705';
     ctx.lineWidth = 3;
     for (let y = 0; y < 256; y += 32) {
       ctx.beginPath();
@@ -134,41 +133,39 @@
     return new THREE.CanvasTexture(canvas);
   }
 
-  // --- GAME ENGINE CLASS ---
+  // --- 3. MASTER GAME CLASS ---
   class HouseGame {
     constructor() {
       this.container = document.getElementById('game-container');
       this.audio = new ProceduralAudioEngine();
-      this.state = 'START'; // START, PLAYING, DEAD, WON
+      this.state = 'START';
 
-      // Settings
-      this.quality = 'medium';
-      this.sensitivity = 1.2;
+      // Persistent Settings
+      this.quality = localStorage.getItem('hw_quality') || 'medium';
+      this.sensitivity = parseFloat(localStorage.getItem('hw_sens') || '1.2');
 
-      // Stats
+      // Vitals & State
       this.fear = 0;
       this.stamina = 100;
-      this.isSprinting = false;
       this.battery = 100;
       this.flashlightOn = true;
+      this.isSprinting = false;
+      this.isMobileRunning = false;
 
       // Objectives & Items
       this.objectivePhase = 1;
       this.inventory = [];
-      this.doors = {};
 
-      // Core Loop Timing
+      // Timing
       this.clock = new THREE.Clock();
       this.lastHeartbeat = 0;
       this.lastStepTime = 0;
 
-      // Inputs
+      // Inputs & Physics
       this.keys = {};
       this.mouseLook = { yaw: 0, pitch: 0 };
       this.isPointerLocked = false;
       this.joystickDelta = { x: 0, y: 0 };
-
-      // Physics / Collision
       this.colliders = [];
       this.interactiveObjects = [];
       this.playerRadius = 0.45;
@@ -178,53 +175,54 @@
       this.initEntity();
       this.bindEvents();
       this.setupMobile();
+      this.checkOrientation();
       this.updateObjectivesUI();
     }
 
     initThree() {
       this.scene = new THREE.Scene();
-      this.scene.fog = new THREE.FogExp2(0x050507, 0.12);
+      this.scene.fog = new THREE.FogExp2(0x040406, 0.12);
 
       this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 50);
-      this.playerPos = new THREE.Vector3(0, 1.6, 12); // Entrance
+      this.playerPos = new THREE.Vector3(0, 1.6, 12);
       this.camera.position.copy(this.playerPos);
 
-      this.renderer = new THREE.WebGLRenderer({ antialias: this.quality === 'high' });
+      this.renderer = new THREE.WebGLRenderer({
+        antialias: this.quality === 'high',
+        powerPreference: 'high-performance'
+      });
       this.renderer.setSize(window.innerWidth, window.innerHeight);
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.quality === 'low' ? 1 : 1.5));
+      this.applyQualitySettings();
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
       this.renderer.toneMappingExposure = 0.9;
       this.container.appendChild(this.renderer.domElement);
 
-      // Flashlight attached to camera
-      this.flashlight = new THREE.SpotLight(0xffecd0, 2.5, 14, Math.PI / 6, 0.4, 1.2);
+      this.flashlight = new THREE.SpotLight(0xffecd0, 2.5, 14, Math.PI / 6, 0.45, 1.2);
       this.flashlightTarget = new THREE.Object3D();
       this.scene.add(this.flashlightTarget);
       this.flashlight.target = this.flashlightTarget;
       this.scene.add(this.flashlight);
 
-      // Low Ambient
-      this.ambientLight = new THREE.AmbientLight(0x111116, 0.2);
+      this.ambientLight = new THREE.AmbientLight(0x0a0a0f, 0.25);
       this.scene.add(this.ambientLight);
 
-      // Overhead flicker bulbs (dormant until power restored)
-      this.hallwayLight = new THREE.PointLight(0xffb070, 0, 8);
+      this.hallwayLight = new THREE.PointLight(0xffb070, 0, 9);
       this.hallwayLight.position.set(0, 2.7, 4);
       this.scene.add(this.hallwayLight);
     }
 
-    buildHouse() {
-      const wallMat = new THREE.MeshStandardMaterial({
-        map: createWallTexture(),
-        roughness: 0.85
-      });
-      const floorMat = new THREE.MeshStandardMaterial({
-        map: createFloorTexture(),
-        roughness: 0.7
-      });
-      const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x18181a, roughness: 0.9 });
+    applyQualitySettings() {
+      let pr = Math.min(window.devicePixelRatio, 1.0);
+      if (this.quality === 'medium') pr = Math.min(window.devicePixelRatio, 1.25);
+      if (this.quality === 'high') pr = Math.min(window.devicePixelRatio, 1.5);
+      this.renderer.setPixelRatio(pr);
+    }
 
-      // Ground Floor
+    buildHouse() {
+      const wallMat = new THREE.MeshStandardMaterial({ map: createWallTexture(), roughness: 0.85 });
+      const floorMat = new THREE.MeshStandardMaterial({ map: createFloorTexture(), roughness: 0.7 });
+      const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x141416, roughness: 0.9 });
+
       const floor = new THREE.Mesh(new THREE.PlaneGeometry(24, 30), floorMat);
       floor.rotation.x = -Math.PI / 2;
       this.scene.add(floor);
@@ -234,7 +232,6 @@
       ceiling.rotation.x = Math.PI / 2;
       this.scene.add(ceiling);
 
-      // Helper to spawn walls with bounding box collision
       const addWall = (x, z, w, d, h = 3.0) => {
         const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
         wall.position.set(x, h / 2, z);
@@ -243,24 +240,17 @@
         return wall;
       };
 
-      // Outer Shell
-      addWall(0, -15, 24, 0.4); // North back wall
-      addWall(0, 15, 24, 0.4);  // South front wall
-      addWall(-12, 0, 0.4, 30); // West wall
-      addWall(12, 0, 0.4, 30);  // East wall
+      // Outer Perimeter
+      addWall(0, -15, 24, 0.4);
+      addWall(0, 15, 24, 0.4);
+      addWall(-12, 0, 0.4, 30);
+      addWall(12, 0, 0.4, 30);
 
-      // Hallway & Rooms layout
-      // Main Entrance Hallway (center, z = 6 to 15)
+      // Rooms & Corridors
       addWall(-3, 10, 0.4, 10);
       addWall(3, 10, 0.4, 10);
-
-      // Living Room (West, z = 4 to 14)
       addWall(-7, 4, 10, 0.4);
-
-      // Kitchen / Dining (East, z = 4 to 14)
       addWall(7, 4, 10, 0.4);
-
-      // Basement Corridor / Locked Door Area (z = -4 to 4)
       addWall(-4, -4, 0.4, 8);
       addWall(4, -4, 0.4, 8);
 
@@ -275,23 +265,20 @@
     spawnInteractive(id, pos, color, action) {
       const mesh = new THREE.Mesh(
         new THREE.BoxGeometry(0.35, 0.35, 0.35),
-        new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.2 })
+        new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.25 })
       );
       mesh.position.copy(pos);
       this.scene.add(mesh);
-
       this.interactiveObjects.push({ id, mesh, action });
     }
 
     initEntity() {
-      // The Entity: A tall, slender silhouette with pale reflective eyes
       this.entityGroup = new THREE.Group();
       const bodyMat = new THREE.MeshBasicMaterial({ color: 0x020202 });
       const body = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.15, 2.4, 8), bodyMat);
       body.position.y = 1.2;
       this.entityGroup.add(body);
 
-      // Eyes
       const eyeMat = new THREE.MeshBasicMaterial({ color: 0xeeffff });
       const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.04, 6, 6), eyeMat);
       leftEye.position.set(-0.08, 2.2, 0.22);
@@ -304,15 +291,13 @@
       this.scene.add(this.entityGroup);
 
       this.entity = {
-        state: 'STALKING', // STALKING, WATCHING, CHASE, DISAPPEARED
-        targetPos: new THREE.Vector3(0, 0, -8),
+        state: 'STALKING',
         speed: 2.1,
         aggression: 1.0,
         seenTimer: 0
       };
     }
 
-    // --- GAMEPLAY LOOPS & OBJECTIVES ---
     collectFuse() {
       this.inventory.push('Fuse');
       this.audio.playFootstep();
@@ -340,7 +325,7 @@
       this.inventory.push('BasementKey');
       this.removeInteractive('BasementKey');
       this.objectivePhase = 4;
-      this.updateObjectivesUI('Unlock the North Ritual room and take the Watcher Doll.');
+      this.updateObjectivesUI('Unlock the North Ritual room and retrieve the Watcher Doll.');
     }
 
     collectArtifact() {
@@ -351,9 +336,9 @@
       this.inventory.push('WatcherDoll');
       this.removeInteractive('DollArtifact');
       this.objectivePhase = 5;
-      this.updateObjectivesUI('IT IS ANGRY. RUN TO THE FRONT ENTRANCE ESCAPE!');
+      this.updateObjectivesUI('IT IS AWAKE. RUN TO THE FRONT ENTRANCE ESCAPE!');
       this.entity.state = 'CHASE';
-      this.entity.speed = 3.6;
+      this.entity.speed = 3.65;
       this.audio.playStinger();
     }
 
@@ -361,7 +346,7 @@
       if (this.objectivePhase === 5 && this.inventory.includes('WatcherDoll')) {
         this.triggerWin();
       } else {
-        this.flashPrompt('THE DOOR WILL NOT BUDGE');
+        this.flashPrompt('THE DOOR IS JAMMED SHUT');
       }
     }
 
@@ -374,33 +359,27 @@
       this.updateInventoryUI();
     }
 
-    // --- ENTITY AI LOGIC ---
     updateEntity(delta) {
       if (this.state !== 'PLAYING') return;
       const dist = this.playerPos.distanceTo(this.entityGroup.position);
-
-      // Check if player is pointing flashlight directly at entity
       const dirToEntity = new THREE.Vector3().subVectors(this.entityGroup.position, this.playerPos).normalize();
       const lookDir = new THREE.Vector3();
       this.camera.getWorldDirection(lookDir);
       const dot = lookDir.dot(dirToEntity);
-      const isObserved = dot > 0.85 && dist < 12 && this.flashlightOn;
+      const isObserved = dot > 0.85 && dist < 12 && this.flashlightOn && this.battery > 0;
 
-      // Fear mechanic
       if (dist < 10) {
-        this.fear = Math.min(100, this.fear + (10 - dist) * 4.0 * delta);
+        this.fear = Math.min(100, this.fear + (10 - dist) * 4.2 * delta);
       } else {
-        this.fear = Math.max(0, this.fear - 3.5 * delta);
+        this.fear = Math.max(0, this.fear - 3.2 * delta);
       }
 
-      // State machine
       switch (this.entity.state) {
         case 'STALKING':
           this.entityGroup.lookAt(this.playerPos.x, 0, this.playerPos.z);
           if (isObserved) {
             this.entity.seenTimer += delta;
-            if (this.entity.seenTimer > 0.7) {
-              // Disappear around corner
+            if (this.entity.seenTimer > 0.6) {
               this.entityGroup.position.set(
                 this.playerPos.x + (Math.random() - 0.5) * 16,
                 0,
@@ -419,24 +398,20 @@
           const step = dirToEntity.multiplyScalar(this.entity.speed * delta);
           this.entityGroup.position.add(step);
 
-          // Caught player
-          if (dist < 1.2) {
+          if (dist < 1.25) {
             this.triggerDeath();
           }
           break;
       }
 
-      // Light Flicker
       if (this.hallwayLight.intensity > 0) {
         this.hallwayLight.intensity = 1.2 + (Math.random() - 0.5) * 0.6;
       }
     }
 
-    // --- CONTROLS & MOVEMENT ---
     updatePlayer(delta) {
       if (this.state !== 'PLAYING') return;
 
-      // Handle Stamina & Sprint
       const wantsRun = (this.keys['ShiftLeft'] || this.isMobileRunning) && this.stamina > 10;
       this.isSprinting = wantsRun;
       const moveSpeed = this.isSprinting ? 4.8 : 2.5;
@@ -447,12 +422,17 @@
         this.stamina = Math.min(100, this.stamina + 10 * delta);
       }
 
-      // Camera Angles
+      if (this.flashlightOn && this.battery > 0) {
+        this.battery = Math.max(0, this.battery - 0.8 * delta);
+        if (this.battery === 0) {
+          this.flashlight.intensity = 0;
+        }
+      }
+
       this.camera.rotation.order = 'YXZ';
       this.camera.rotation.y = this.mouseLook.yaw;
       this.camera.rotation.x = this.mouseLook.pitch;
 
-      // Direction vectors
       const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mouseLook.yaw);
       const side = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.mouseLook.yaw);
 
@@ -462,16 +442,13 @@
       if (this.keys['KeyD']) move.add(side);
       if (this.keys['KeyA']) move.sub(side);
 
-      // Joystick contribution
-      if (Math.abs(this.joystickDelta.x) > 0.1 || Math.abs(this.joystickDelta.y) > 0.1) {
+      if (Math.abs(this.joystickDelta.x) > 0.08 || Math.abs(this.joystickDelta.y) > 0.08) {
         move.add(side.clone().multiplyScalar(this.joystickDelta.x));
         move.add(forward.clone().multiplyScalar(-this.joystickDelta.y));
       }
 
       if (move.lengthSq() > 0) {
         move.normalize().multiplyScalar(moveSpeed * delta);
-
-        // Simple Axis Collision Check
         const nextX = this.playerPos.x + move.x;
         const nextZ = this.playerPos.z + move.z;
 
@@ -482,7 +459,6 @@
           this.playerPos.z = nextZ;
         }
 
-        // Footsteps
         this.lastStepTime += delta * (this.isSprinting ? 1.6 : 1.0);
         if (this.lastStepTime > 0.5) {
           this.audio.playFootstep();
@@ -490,17 +466,14 @@
         }
       }
 
-      // Headbob
       const bob = move.lengthSq() > 0 ? Math.sin(this.clock.getElapsedTime() * (this.isSprinting ? 14 : 9)) * 0.04 : 0;
       this.camera.position.set(this.playerPos.x, 1.6 + bob, this.playerPos.z);
 
-      // Flashlight follows camera
       this.flashlight.position.copy(this.camera.position);
       const flashDir = new THREE.Vector3();
       this.camera.getWorldDirection(flashDir);
       this.flashlightTarget.position.copy(this.camera.position).add(flashDir);
 
-      // Interaction Raycast
       this.checkInteractionRay();
     }
 
@@ -537,16 +510,15 @@
       }
     }
 
-    // --- UI UPDATES & DEATH/WIN STATES ---
     updateHUD() {
       document.getElementById('stamina-bar-fill').style.width = `${this.stamina}%`;
       document.getElementById('fear-bar-fill').style.width = `${this.fear}%`;
+      document.getElementById('battery-bar-fill').style.width = `${this.battery}%`;
 
       const vignette = document.getElementById('vignette');
       const fearRatio = this.fear / 100;
       vignette.style.boxShadow = `inset 0 0 ${100 + fearRatio * 120}px rgba(0,0,0,${0.85 + fearRatio * 0.15})`;
 
-      // Heartbeat audio at high fear
       if (this.fear > 50 && this.clock.getElapsedTime() - this.lastHeartbeat > (1.2 - fearRatio * 0.7)) {
         this.audio.playHeartbeat(fearRatio);
         this.lastHeartbeat = this.clock.getElapsedTime();
@@ -590,19 +562,53 @@
       document.getElementById('victory-screen').classList.remove('hidden');
     }
 
-    // --- INPUT & EVENT LISTENERS ---
+    checkOrientation() {
+      const warning = document.getElementById('orientation-warning');
+      if (this.isMobileDevice() && window.innerHeight > window.innerWidth) {
+        warning.classList.remove('hidden');
+      } else {
+        warning.classList.add('hidden');
+      }
+    }
+
     bindEvents() {
       window.addEventListener('resize', () => {
         this.camera.aspect = window.innerWidth / window.innerHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.applyQualitySettings();
+        this.checkOrientation();
       });
 
-      // Desktop keyboard
+      window.addEventListener('orientationchange', () => {
+        setTimeout(() => this.checkOrientation(), 150);
+      });
+
+      // Settings DOM Bindings
+      const qualitySelect = document.getElementById('select-quality');
+      if (qualitySelect) {
+        qualitySelect.value = this.quality;
+        qualitySelect.addEventListener('change', e => {
+          this.quality = e.target.value;
+          localStorage.setItem('hw_quality', this.quality);
+          this.applyQualitySettings();
+        });
+      }
+
+      const sensSlider = document.getElementById('slider-sens');
+      if (sensSlider) {
+        sensSlider.value = this.sensitivity;
+        sensSlider.addEventListener('input', e => {
+          this.sensitivity = parseFloat(e.target.value);
+          localStorage.setItem('hw_sens', this.sensitivity.toString());
+        });
+      }
+
+      // Keyboard Controls
       window.addEventListener('keydown', e => {
         this.keys[e.code] = true;
         if (e.code === 'KeyE') this.triggerInteract();
-        if (e.code === 'KeyF') {
+        if (e.code === 'KeyF' && this.battery > 0) {
           this.flashlightOn = !this.flashlightOn;
           this.flashlight.intensity = this.flashlightOn ? 2.5 : 0;
         }
@@ -611,7 +617,7 @@
         this.keys[e.code] = false;
       });
 
-      // Desktop Pointer Lock
+      // Pointer Lock
       this.container.addEventListener('click', () => {
         if (this.state === 'PLAYING' && !this.isMobileDevice()) {
           this.container.requestPointerLock();
@@ -630,7 +636,7 @@
         this.mouseLook.pitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.mouseLook.pitch));
       });
 
-      // Start Button
+      // UI Flow
       document.getElementById('btn-play').addEventListener('click', () => {
         this.audio.init();
         document.getElementById('start-screen').classList.add('hidden');
@@ -696,7 +702,6 @@
       joystickZone.addEventListener('touchend', resetJoy);
       joystickZone.addEventListener('touchcancel', resetJoy);
 
-      // Touch Look (Right side of screen)
       const lookZone = document.getElementById('touch-look-zone');
       let lookTouchId = null;
       let lastLookX = 0, lastLookY = 0;
@@ -725,7 +730,6 @@
         }
       });
 
-      // Mobile Buttons
       document.getElementById('btn-mobile-interact').addEventListener('touchstart', e => {
         e.preventDefault();
         this.triggerInteract();
@@ -733,8 +737,10 @@
 
       document.getElementById('btn-mobile-flash').addEventListener('touchstart', e => {
         e.preventDefault();
-        this.flashlightOn = !this.flashlightOn;
-        this.flashlight.intensity = this.flashlightOn ? 2.5 : 0;
+        if (this.battery > 0) {
+          this.flashlightOn = !this.flashlightOn;
+          this.flashlight.intensity = this.flashlightOn ? 2.5 : 0;
+        }
       });
 
       const runBtn = document.getElementById('btn-mobile-run');
@@ -749,7 +755,6 @@
       return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 850;
     }
 
-    // --- MAIN LOOP ---
     start() {
       const animate = () => {
         requestAnimationFrame(animate);
@@ -765,7 +770,6 @@
     }
   }
 
-  // Boot on DOM Ready
   window.addEventListener('DOMContentLoaded', () => {
     const game = new HouseGame();
     game.start();
