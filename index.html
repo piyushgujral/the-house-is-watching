@@ -5,21 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#030304" />
   <title>The House Is Watching</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Three.js from CDN for zero-dependency browser play -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
-  <!-- Orientation Lock Warning -->
+  <!-- Orientation Lock Modal -->
   <div id="orientation-warning" class="overlay-screen hidden">
     <div class="modal-box">
-      <h2>PLEASE ROTATE YOUR DEVICE</h2>
-      <p>Landscape orientation is required to enter the house.</p>
+      <h2>ROTATE YOUR DEVICE</h2>
+      <p>Please rotate your phone to landscape mode to enter the house.</p>
     </div>
   </div>
 
-  <!-- 3D Canvas Canvas Container -->
+  <!-- 3D Render Target Container -->
   <div id="game-container"></div>
 
   <!-- Cinematic Horror HUD -->
@@ -27,7 +27,7 @@
     <div id="vignette"></div>
     <div id="fear-glitch"></div>
 
-    <div class="hud-top">
+    <header class="hud-top">
       <div id="objective-panel">
         <span class="hud-label">CURRENT OBJECTIVE</span>
         <div id="objective-text">Enter the house and restore power.</div>
@@ -36,24 +36,24 @@
         <span class="hud-label">FEAR</span>
         <div class="meter-bar"><div id="fear-bar-fill"></div></div>
       </div>
-    </div>
+    </header>
 
-    <!-- Center Interaction Crosshair & Prompt -->
+    <!-- Center Interaction Reticle & Context Prompt -->
     <div id="reticle"></div>
     <div id="interaction-prompt" class="hidden">
       <span id="interaction-key">[E]</span>
       <span id="interaction-label">INTERACT</span>
     </div>
 
-    <!-- Bottom Status & Inventory -->
-    <div class="hud-bottom">
+    <!-- Bottom Readouts & Inventory -->
+    <footer class="hud-bottom">
       <div id="stamina-panel">
         <span class="hud-label">STAMINA</span>
         <div class="meter-bar"><div id="stamina-bar-fill"></div></div>
       </div>
 
       <div id="inventory-panel">
-        <span class="hud-label">INVENTORY</span>
+        <span class="hud-label">POCKETS</span>
         <div id="inventory-slots">
           <span class="inv-slot" id="inv-slot-0">EMPTY</span>
           <span class="inv-slot" id="inv-slot-1">EMPTY</span>
@@ -62,12 +62,12 @@
       </div>
 
       <div id="battery-panel">
-        <span class="hud-label">FLASHLIGHT [F]</span>
+        <span class="hud-label">LIGHT [F]</span>
         <div class="meter-bar"><div id="battery-bar-fill"></div></div>
       </div>
-    </div>
+    </footer>
 
-    <!-- Mobile On-Screen Controls -->
+    <!-- Mobile Dual Touch Interface -->
     <div id="mobile-controls" class="hidden">
       <div id="joystick-zone">
         <div id="joystick-base">
@@ -83,7 +83,7 @@
     </div>
   </div>
 
-  <!-- Start Title Screen -->
+  <!-- Main Menu / Start Screen -->
   <div id="start-screen" class="overlay-screen">
     <div class="title-container">
       <h1 class="glitch-title">THE HOUSE<br />IS WATCHING</h1>
@@ -91,19 +91,19 @@
 
       <div class="menu-actions">
         <button id="btn-play" class="primary-btn">ENTER HOUSE</button>
-        <button id="btn-how-to" class="secondary-btn">HOW TO PLAY</button>
+        <button id="btn-how-to" class="secondary-btn">SURVIVAL GUIDE</button>
       </div>
 
       <div class="settings-row">
-        <label>Quality:
+        <label>Graphics:
           <select id="select-quality">
-            <option value="low">Low (Mobile/Battery)</option>
-            <option value="medium" selected>Medium</option>
-            <option value="high">High (Shadows/Bloom)</option>
+            <option value="low">Low (Mobile Optimized)</option>
+            <option value="medium" selected>Medium (Standard)</option>
+            <option value="high">High (Atmospheric)</option>
           </select>
         </label>
-        <label>Sensitivity:
-          <input type="range" id="slider-sens" min="0.5" max="3.0" step="0.1" value="1.2" />
+        <label>Look Sensitivity:
+          <input type="range" id="slider-sens" min="0.4" max="2.8" step="0.1" value="1.2" />
         </label>
       </div>
     </div>
@@ -113,27 +113,27 @@
   <div id="modal-howto" class="overlay-screen hidden">
     <div class="modal-box">
       <h2>SURVIVAL MANUAL</h2>
-      <p><strong>Desktop:</strong> WASD to Walk, SHIFT to Sprint, Mouse to Look, E to Interact, F for Flashlight.</p>
-      <p><strong>Mobile:</strong> Left Virtual Stick to Walk, Right side touch drag to Look, On-screen action buttons.</p>
-      <p><strong>Mechanics:</strong> Restoring power alerts what lives here. Keep your light off when it watches. If footsteps stop behind you, run.</p>
-      <button id="btn-close-howto" class="secondary-btn">BACK</button>
+      <p><strong>Movement:</strong> Desktop uses <code>WASD</code> + Mouse Look. Mobile uses the left on-screen stick + right-side touch drag.</p>
+      <p><strong>Interaction:</strong> Press <code>[E]</code> or tap <code>USE</code> when close to switches, doors, or items.</p>
+      <p><strong>The Watcher:</strong> The house observes your footsteps. Continuous sprinting and flickering lights agitate it. When observed directly, keep your distance and look away.</p>
+      <button id="btn-close-howto" class="secondary-btn">RETURN</button>
     </div>
   </div>
 
-  <!-- Death Screen -->
+  <!-- Game Over Screen -->
   <div id="death-screen" class="overlay-screen hidden">
     <div class="modal-box horror-box">
       <h1 class="blood-title">IT FOUND YOU</h1>
-      <p>Your mind gave in to the dark.</p>
+      <p>Your senses collapsed into darkness.</p>
       <button id="btn-restart-death" class="primary-btn">TRY AGAIN</button>
     </div>
   </div>
 
-  <!-- Victory Screen -->
+  <!-- Escape / Victory Screen -->
   <div id="victory-screen" class="overlay-screen hidden">
     <div class="modal-box victory-box">
       <h1 class="victory-title">YOU ESCAPED</h1>
-      <p>You left the house behind, but its eyes remain with you.</p>
+      <p>You made it past the gates, but the eyes remain behind the glass.</p>
       <button id="btn-restart-victory" class="primary-btn">PLAY AGAIN</button>
     </div>
   </div>
