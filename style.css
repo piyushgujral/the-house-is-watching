@@ -11,9 +11,9 @@ body, html {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: #050505;
+  background-color: #030304;
   font-family: 'Courier New', Courier, monospace;
-  color: #e0e0e0;
+  color: #dedede;
 }
 
 #game-container {
@@ -25,7 +25,6 @@ body, html {
   z-index: 1;
 }
 
-/* Overlays */
 .overlay-screen {
   position: absolute;
   top: 0;
@@ -36,7 +35,8 @@ body, html {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: radial-gradient(circle, rgba(15,10,10,0.92) 0%, rgba(2,2,2,0.98) 100%);
+  background: radial-gradient(circle, rgba(14, 10, 10, 0.94) 0%, rgba(2, 2, 3, 0.99) 100%);
+  pointer-events: auto;
 }
 
 .hidden {
@@ -44,100 +44,98 @@ body, html {
 }
 
 .modal-box {
-  background: rgba(18, 18, 20, 0.95);
-  border: 1px solid #332222;
-  padding: 30px;
+  background: rgba(16, 16, 18, 0.96);
+  border: 1px solid #3d2323;
+  padding: 28px;
   border-radius: 4px;
-  max-width: 500px;
-  width: 90%;
+  max-width: 480px;
+  width: 88%;
   text-align: center;
-  box-shadow: 0 0 25px rgba(0,0,0,0.9);
+  box-shadow: 0 0 35px rgba(0, 0, 0, 0.95);
 }
 
 .modal-box h2 {
-  color: #c93b3b;
-  margin-bottom: 15px;
+  color: #bf2d2d;
+  margin-bottom: 12px;
   letter-spacing: 2px;
 }
 
 .modal-box p {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   line-height: 1.6;
-  color: #a0a0a0;
-  margin-bottom: 20px;
+  color: #9c9c9c;
+  margin-bottom: 18px;
 }
 
-/* Titles */
 .glitch-title {
-  font-size: 3rem;
+  font-size: 2.8rem;
   letter-spacing: 6px;
-  color: #c52b2b;
-  text-shadow: 2px 2px 8px #000;
-  margin-bottom: 5px;
+  color: #ba2525;
+  text-shadow: 2px 2px 10px #000;
+  margin-bottom: 6px;
   text-align: center;
 }
 
 .subtitle {
-  font-size: 1rem;
+  font-size: 0.95rem;
   letter-spacing: 4px;
-  color: #777;
+  color: #6d6d6d;
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 24px;
 }
 
 .blood-title {
-  color: #b31010;
-  font-size: 2.5rem;
-  letter-spacing: 5px;
-  margin-bottom: 10px;
+  color: #b01010;
+  font-size: 2.4rem;
+  letter-spacing: 4px;
+  margin-bottom: 8px;
 }
 
 .victory-title {
-  color: #55aa66;
-  font-size: 2.5rem;
-  letter-spacing: 5px;
-  margin-bottom: 10px;
+  color: #4da65d;
+  font-size: 2.4rem;
+  letter-spacing: 4px;
+  margin-bottom: 8px;
 }
 
-/* Buttons */
 .primary-btn, .secondary-btn {
   display: block;
   width: 220px;
   margin: 10px auto;
-  padding: 12px 20px;
-  background: #1f1414;
-  border: 1px solid #6b2424;
-  color: #ddd;
+  padding: 12px 16px;
+  background: #191212;
+  border: 1px solid #5a1f1f;
+  color: #d6d6d6;
   font-family: inherit;
-  font-size: 1rem;
+  font-size: 0.95rem;
   letter-spacing: 2px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .primary-btn:hover {
-  background: #6b2424;
+  background: #5a1f1f;
   color: #fff;
-  box-shadow: 0 0 15px rgba(255, 30, 30, 0.4);
+  box-shadow: 0 0 16px rgba(255, 30, 30, 0.35);
 }
 
 .secondary-btn:hover {
-  background: #2b2b2b;
+  background: #252528;
 }
 
 .settings-row {
-  margin-top: 25px;
+  margin-top: 22px;
   display: flex;
-  gap: 20px;
+  gap: 16px;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: #888;
 }
 
 .settings-row select, .settings-row input {
-  background: #111;
+  background: #0f0f10;
   color: #eee;
-  border: 1px solid #444;
+  border: 1px solid #3c3c40;
   padding: 4px;
 }
 
@@ -156,47 +154,48 @@ body, html {
   position: absolute;
   width: 100%;
   height: 100%;
-  box-shadow: inset 0 0 100px rgba(0,0,0,0.85);
-  transition: box-shadow 0.3s;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.88);
+  pointer-events: none;
+  transition: box-shadow 0.2s linear;
 }
 
 .hud-top {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  right: 20px;
+  top: 16px;
+  left: 16px;
+  right: 16px;
   display: flex;
   justify-content: space-between;
 }
 
 .hud-label {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   letter-spacing: 2px;
-  color: #888;
+  color: #7a7a7a;
   display: block;
   margin-bottom: 4px;
 }
 
 #objective-panel {
-  background: rgba(10, 10, 10, 0.65);
-  padding: 8px 14px;
-  border-left: 2px solid #a32222;
+  background: rgba(8, 8, 10, 0.7);
+  padding: 8px 12px;
+  border-left: 2px solid #9e2323;
 }
 
 #objective-text {
-  font-size: 0.85rem;
-  color: #eee;
+  font-size: 0.82rem;
+  color: #e5e5e5;
 }
 
 #fear-meter-panel, #stamina-panel, #battery-panel {
-  background: rgba(10, 10, 10, 0.65);
-  padding: 8px 14px;
+  background: rgba(8, 8, 10, 0.7);
+  padding: 8px 12px;
 }
 
 .meter-bar {
-  width: 120px;
-  height: 6px;
-  background: #222;
+  width: 110px;
+  height: 5px;
+  background: #1e1e22;
   border-radius: 2px;
   overflow: hidden;
 }
@@ -204,20 +203,19 @@ body, html {
 #fear-bar-fill {
   width: 0%;
   height: 100%;
-  background: #b52222;
-  transition: width 0.2s;
+  background: #aa1e1e;
 }
 
 #stamina-bar-fill {
   width: 100%;
   height: 100%;
-  background: #3b7ec9;
+  background: #316eb5;
 }
 
 #battery-bar-fill {
   width: 100%;
   height: 100%;
-  background: #d1a72a;
+  background: #bfa12b;
 }
 
 #reticle {
@@ -226,54 +224,54 @@ body, html {
   left: 50%;
   width: 4px;
   height: 4px;
-  background: rgba(255,255,255,0.4);
+  background: rgba(255, 255, 255, 0.4);
   transform: translate(-50%, -50%);
   border-radius: 50%;
 }
 
 #interaction-prompt {
   position: absolute;
-  top: 55%;
+  top: 56%;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.7);
-  padding: 6px 12px;
-  border: 1px solid #444;
-  font-size: 0.8rem;
+  background: rgba(4, 4, 6, 0.85);
+  padding: 6px 14px;
+  border: 1px solid #3c3c40;
+  font-size: 0.78rem;
   letter-spacing: 1px;
 }
 
 #interaction-key {
-  color: #c93b3b;
+  color: #bf2d2d;
   font-weight: bold;
 }
 
 .hud-bottom {
   position: absolute;
-  bottom: 20px;
-  left: 20px;
-  right: 20px;
+  bottom: 16px;
+  left: 16px;
+  right: 16px;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
 }
 
 #inventory-panel {
-  background: rgba(10, 10, 10, 0.65);
-  padding: 6px 12px;
+  background: rgba(8, 8, 10, 0.7);
+  padding: 6px 10px;
 }
 
 .inv-slot {
   display: inline-block;
-  font-size: 0.75rem;
-  background: #191919;
-  border: 1px solid #333;
+  font-size: 0.72rem;
+  background: #141416;
+  border: 1px solid #2a2a2d;
   padding: 4px 8px;
   margin: 0 2px;
-  color: #aaa;
+  color: #999;
 }
 
-/* Mobile Controls */
+/* Mobile Virtual Controller */
 #mobile-controls {
   pointer-events: auto;
   position: absolute;
@@ -285,62 +283,67 @@ body, html {
 
 #joystick-zone {
   position: absolute;
-  bottom: 30px;
-  left: 30px;
+  bottom: 24px;
+  left: 24px;
   width: 120px;
   height: 120px;
+  touch-action: none;
 }
 
 #joystick-base {
   width: 100%;
   height: 100%;
-  background: rgba(255,255,255,0.06);
-  border: 2px solid rgba(255,255,255,0.15);
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.16);
   border-radius: 50%;
   position: relative;
 }
 
 #joystick-thumb {
-  width: 50px;
-  height: 50px;
-  background: rgba(255,255,255,0.25);
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.28);
   border-radius: 50%;
   position: absolute;
-  top: 35px;
-  left: 35px;
+  top: 36px;
+  left: 36px;
   transform: translate(0, 0);
+  pointer-events: none;
 }
 
 #touch-look-zone {
   position: absolute;
   top: 0;
   right: 0;
-  width: 50%;
+  width: 52%;
   height: 100%;
+  touch-action: none;
 }
 
 #mobile-action-buttons {
   position: absolute;
-  bottom: 30px;
-  right: 30px;
+  bottom: 24px;
+  right: 24px;
   display: flex;
   gap: 12px;
+  z-index: 20;
 }
 
 .touch-btn {
-  width: 55px;
-  height: 55px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
-  background: rgba(20, 20, 20, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(14, 14, 16, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   color: #eee;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-family: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: manipulation;
 }
 
 .touch-btn:active {
-  background: rgba(150, 30, 30, 0.8);
+  background: rgba(130, 24, 24, 0.85);
 }
