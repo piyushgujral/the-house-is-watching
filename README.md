@@ -1,39 +1,25 @@
 # The House Is Watching
 
-A zero-budget, cross-platform multiplayer horror game prototype.
+A first-person psychological survival horror prototype built for mobile and desktop web browsers.
 
-## Vision
+## Overview
+- **Engine**: Pure Three.js + Web Audio API synthesizer.
+- **Loop**: 10-phase narrative objective chain (Fuse $\rightarrow$ Generator $\rightarrow$ Bedroom Key $\rightarrow$ Watcher Doll $\rightarrow$ Front Escape).
+- **Monster**: Non-linear psychological AI exhibiting dynamic stalking, line-of-sight vanishing, and endgame sprint chases.
+- **Platforms**: Mobile (touch joystick + look pad) and Desktop (WASD + Pointer Lock).
 
-1–4 players enter a house that changes as they investigate it. The house and entity learn from player behavior, creating unpredictable horror and social moments.
+## Controls
+| Action | Desktop | Mobile |
+| :--- | :--- | :--- |
+| Move | `W, A, S, D` | Virtual Left Thumbstick |
+| Look | Mouse Look | Right Screen Drag |
+| Flashlight | `F` | `LIGHT` Button |
+| Interact | `E` | `USE` Button |
+| Sprint | `Shift` | `RUN` Button |
 
-## Current milestone — V0.1
-
-The first prototype focuses on proving the core loop before adding multiplayer, ads, payments, or publishing:
-
-- Explore a small house
-- Move around on desktop or mobile browser
-- Interact with objects
-- Complete a simple objective
-- Trigger a house-change event
-- Reach the exit
-
-## Development rule
-
-No paid assets, services, advertising, subscriptions, crypto, or publishing costs during prototype development. Time is the primary investment.
-
-## Repository structure
-
-- `index.html` — browser prototype
-- `style.css` — interface and mobile controls
-- `game.js` — prototype gameplay logic
-- `docs/GAME_DESIGN.md` — game design direction
-
-## Next milestones
-
-1. V0.1 single-player web prototype
-2. Better atmosphere, sound and interaction
-3. Multiplayer architecture
-4. Mobile optimization
-5. PC build
-6. External playtesting
-7. Monetization only after retention is proven
+## Local Execution
+Open `index.html` via any static file server:
+```bash
+npx serve .
+# or
+python3 -m http.server 8080
