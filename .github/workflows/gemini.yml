@@ -27,6 +27,14 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Configure Gemini trust for CI
+        shell: bash
+        run: echo "GEMINI_CLI_TRUST_WORKSPACE=true" >> "$GITHUB_ENV"
+
+      - name: Verify Gemini trust configuration
+        shell: bash
+        run: test "$GEMINI_CLI_TRUST_WORKSPACE" = "true"
+
       - name: Run Gemini coding agent
         uses: google-github-actions/run-gemini-cli@v0.1.22
         env:
