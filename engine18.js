@@ -21,11 +21,10 @@ function boot(){
    const ring=new T.Mesh(new T.TorusGeometry(.3,.025,6,16),glow);ring.rotation.x=Math.PI/2;group.add(ring);
    const mark=new T.Mesh(new T.BoxGeometry(.035,.32,.025),glow);mark.rotation.z=.75;group.add(mark);const mark2=mark.clone();mark2.rotation.z=-.75;group.add(mark2);
    g.scene.add(group);seals.push({id,group,used:false});
-   g.interactables.push({id,label:'BREAK HOUSE SEAL',group,body:base,removed:false,action:function(){breakSeal(id);}});
  }
  addSeal('Seal1',-10,-10);addSeal('Seal2',10,-10);addSeal('Seal3',0,-3);
  function activate(){
-   state.started=true;state.seals=0;
+   state.started=true;state.finished=false;state.seals=0;
    seals.forEach(s=>{s.used=false;s.group.visible=true;});
    g.updateObjective('BREAK THE THREE HOUSE SEALS. DO NOT LET IT CORNER YOU.');
    if(g.audio&&g.audio.sting)g.audio.sting();
@@ -41,13 +40,12 @@ function boot(){
    if(state.seals<3){g.updateObjective('SEALS BROKEN: '+state.seals+'/3 — THE HOUSE IS ANGRY.');if(g.entity){g.entity.state='HUNTING';g.entity.speed=2.25+state.seals*.35;}}
    else {state.finished=true;g.phase=6;g.updateObjective('THE HOUSE IS OPEN. RUN TO THE FRONT DOOR.');if(g.entity){g.entity.state='CHASE';g.entity.speed=3.7;}g.audio&&g.audio.sting&&g.audio.sting();}
  }
- // The Doll still uses the original inventory/gameplay rules, but its aftermath
- // becomes a seal hunt instead of an immediate unavoidable death run.
  const oldCollect=g.collect.bind(g);
  g.collect=function(id){oldCollect(id);if(id==='Doll'&&this.inventory.includes('Doll')){if(this.entity){this.entity.state='STALK';this.entity.speed=2.25;}activate();}};
  const oldEscape=g.escape.bind(g);
  g.escape=function(){
    if(state.started&&!state.finished){this.flashPrompt('THE FRONT DOOR IS SEALED');if(this.audio&&this.audio.creak)this.audio.creak();return;}
+   if(state.finished){this.win();return;}
    oldEscape();
  };
  function houseEvent(){
@@ -66,8 +64,6 @@ function boot(){
  const oldLoop=g.loop.bind(g);
  g.loop=function(){
    if(this.state==='PLAYING'&&state.started&&!state.finished){
-     state.eventTimer-=this.clock.getDelta?0:0;
-     // Clock timing is owned by the core loop; use elapsed time checkpoints.
      const now=this.clock.elapsedTime;
      if(now>state.nextEvent){state.nextEvent=now+8+Math.random()*9;houseEvent();}
      seals.forEach((s,i)=>{if(s.group.visible){const q=1+Math.sin(now*3+i)*.12;s.group.scale.set(q,q,q);s.group.rotation.y=now*.35;}});
