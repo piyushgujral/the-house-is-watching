@@ -1,32 +1,41 @@
-/* THE HOUSE IS WATCHING — Engine 26: Co-op Foundation
- * Large gameplay architecture chunk: local party simulation, player state,
- * shared objectives, downed/revive flow, teammate HUD and Watcher targeting hooks.
- * Network transport is intentionally abstract so a real WebSocket/WebRTC layer
- * can replace the local party without rewriting the gameplay state model.
+/* THE HOUSE IS WATCHING — Engine 26: Co-op Gameplay Foundation v2
+ * Party state, remote avatar proxies, interpolation, revive/death flow,
+ * shared campaign snapshot and Watcher target hooks.
  */
 (function(){
 'use strict';
 function boot(){
  const g=window.houseGame;
- if(!g||!g.scene||!g.player)return setTimeout(boot,150);
+ if(!g||!g.scene||!g.player||!window.THREE)return setTimeout(boot,150);
  if(g.__engine26)return;g.__engine26=true;
- const root=document.createElement('div');root.id='coop-foundation-hud';root.style.cssText='position:fixed;left:18px;top:112px;min-width:205px;padding:9px 11px;background:rgba(4,4,6,.55);border:1px solid rgba(210,190,170,.2);font:700 10px/1.55 monospace;letter-spacing:1.2px;color:#d9cabb;z-index:34;pointer-events:none;display:none';root.innerHTML='<div style="font-size:9px;opacity:.55;letter-spacing:2px">HOUSE PARTY</div><div id="coop-members"></div><div id="coop-objective" style="margin-top:5px;opacity:.72"></div>';document.body.appendChild(root);
+ const S=()=>g.scene.scale&&g.scene.scale.x||1;
+ const root=document.createElement('div');root.id='coop-foundation-hud';root.style.cssText='position:fixed;left:18px;top:112px;min-width:220px;padding:9px 11px;background:rgba(4,4,6,.62);border:1px solid rgba(210,190,170,.2);font:700 10px/1.55 monospace;letter-spacing:1.1px;color:#d9cabb;z-index:34;pointer-events:none;display:none';root.innerHTML='<div style="font-size:9px;opacity:.55;letter-spacing:2px">HOUSE PARTY</div><div id="coop-members"></div><div id="coop-objective" style="margin-top:5px;opacity:.72"></div><div id="coop-revive" style="margin-top:5px;color:#e7c5a5"></div>';document.body.appendChild(root);
  const members=new Map();
- const local={id:'local',name:'YOU',state:'ALIVE',health:100,revive:0,room:'ENTRY',noise:0,lastSeen:0};members.set(local.id,local);
- const state={mode:'SOLO_READY',partyId:null,sharedStage:0,sharedFlags:{},revives:0,downedCount:0,signal:0};
- function room(){const s=g.scene.scale&&g.scene.scale.x||1,p=g.player,z=p.z/s,x=p.x/s;return z>7?'ENTRY':z>0?'HALL':z>-7?(x<0?'BEDROOM':'STUDY'):z>-13?'RITUAL':'BACK';}
- function syncCampaign(){const c=g.campaign;if(!c)return;state.sharedStage=c.stage||0;state.sharedFlags=Object.assign({},c.flags||{});local.room=room();local.noise=Number(c.pressure||0);}
- function ensureMember(id,name){if(!members.has(id))members.set(id,{id,name:name||('PLAYER '+(members.size+1)),state:'ALIVE',health:100,revive:0,room:'ENTRY',noise:0,lastSeen:0});return members.get(id);}
- function down(id){const m=members.get(id);if(!m||m.state==='DOWNED'||m.state==='DEAD')return;m.state='DOWNED';m.health=0;m.revive=12;state.downedCount++;if(g.worldOverhaul&&g.worldOverhaul.say)g.worldOverhaul.say(m.id==='local'?'YOU ARE DOWN. FIND HELP.':m.name+' IS DOWN.');}
- function revive(id){const m=members.get(id);if(!m||m.state!=='DOWNED')return false;m.state='ALIVE';m.health=45;m.revive=0;state.revives++;state.downedCount=Math.max(0,state.downedCount-1);if(g.worldOverhaul&&g.worldOverhaul.say)g.worldOverhaul.say(m.name+' IS BACK ON THEIR FEET');return true;}
- function updateRevives(dt){members.forEach(m=>{if(m.state==='DOWNED'){m.revive-=dt;if(m.revive<=0){m.state='DEAD';state.downedCount=Math.max(0,state.downedCount-1);if(g.worldOverhaul&&g.worldOverhaul.say)g.worldOverhaul.say(m.name+' WAS LOST TO THE HOUSE');}}});}
- function nearestTarget(){let best=local,bd=Infinity,s=g.scene.scale&&g.scene.scale.x||1;members.forEach(m=>{if(m.state==='DEAD'||m.id==='local'||!m.object)return;const p=m.object.position,d=Math.hypot(g.player.x-p.x,g.player.z-p.z)/s;if(d<bd){bd=d;best=m;}});return best;}
- function render(){const el=root.querySelector('#coop-members'),obj=root.querySelector('#coop-objective');el.innerHTML=Array.from(members.values()).map(m=>'<div>'+ (m.state==='DOWNED'?'DOWN':m.state==='DEAD'?'LOST':m.name)+' <span style="opacity:.45">'+m.room+'</span></div>').join('');const c=g.campaign,e=g.houseEndgame;obj.textContent=e&&e.started&&!e.finished?'SEALS: '+(e.seals||0)+'/3':c?('STAGE '+c.stage):state.mode;root.style.display=(members.size>1||state.mode!=='SOLO_READY')?'block':'none';}
- g.coop={state,members,addRemotePlayer:(id,name)=>{const m=ensureMember(id,name);state.mode='PARTY';render();return m;},updateRemotePlayer:(id,data)=>{const m=ensureMember(id);Object.assign(m,data,{lastSeen:performance.now()});render();},removeRemotePlayer:id=>{members.delete(id);if(members.size===1)state.mode='SOLO_READY';render();},down,revive,nearestTarget,sync:syncCampaign};
- const oldUpdatePlayer=g.updatePlayer.bind(g),oldUpdateEntity=g.updateEntity.bind(g);
- g.updatePlayer=function(dt){oldUpdatePlayer(dt);if(this.state!=='PLAYING')return;syncCampaign();updateRevives(dt);render();};
- g.updateEntity=function(dt){oldUpdateEntity(dt);if(this.state!=='PLAYING'||!this.entity)return;const target=nearestTarget();if(target&&target.id!=='local'&&this.entity.state==='HUNTING')this.entity.targetId=target.id;if(this.entity.state==='CHASE')this.entity.targetId='local';};
- g.coopFoundation={state,members,render};
+ const local={id:'local',name:'YOU',state:'ALIVE',health:100,revive:0,room:'ENTRY',noise:0,lastSeen:performance.now(),position:null};members.set(local.id,local);
+ const state={mode:'SOLO_READY',partyId:null,sharedStage:0,sharedFlags:{},sharedSeals:0,revives:0,downedCount:0,signal:0,partyLost:false,partyWon:false};
+ function roomAt(x,z){const s=S();x/=s;z/=s;return z>7?'ENTRY':z>0?'HALL':z>-7?(x<0?'BEDROOM':'STUDY'):z>-13?'RITUAL':'BACK';}
+ function syncCampaign(){const c=g.campaign,e=g.houseEndgame;state.sharedStage=c?c.stage||0:state.sharedStage;state.sharedFlags=Object.assign({},c&&c.flags||state.sharedFlags);state.sharedSeals=e?e.seals||0:state.sharedSeals;local.room=roomAt(g.player.x,g.player.z);local.noise=Number(c&&c.pressure||0);local.position={x:g.player.x,z:g.player.z};}
+ function avatar(name){const group=new THREE.Group(),skin=new THREE.MeshStandardMaterial({color:0xb7aaa0,roughness:.85}),cloth=new THREE.MeshStandardMaterial({color:0x353b43,roughness:.95}),dark=new THREE.MeshStandardMaterial({color:0x16191d,roughness:1});
+  const torso=new THREE.Mesh(new THREE.CylinderGeometry(.24,.31,.85,8),cloth);torso.position.y=1.05;group.add(torso);const head=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),skin);head.position.y=1.65;group.add(head);
+  [-1,1].forEach(side=>{const arm=new THREE.Mesh(new THREE.CylinderGeometry(.075,.065,.72,6),skin);arm.position.set(side*.35,1.05,0);arm.rotation.z=side*.12;group.add(arm);const leg=new THREE.Mesh(new THREE.CylinderGeometry(.09,.075,.82,6),dark);leg.position.set(side*.14,.43,0);group.add(leg);});
+  const tag=document.createElement('canvas');tag.width=256;tag.height=64;const ctx=tag.getContext('2d');ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(0,0,256,64);ctx.fillStyle='#eee2d2';ctx.font='bold 26px monospace';ctx.textAlign='center';ctx.fillText((name||'PLAYER').slice(0,14),128,41);const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(tag),transparent:true,depthTest:false}));sprite.position.y=2.2;sprite.scale.set(2.1,.52,1);group.add(sprite);group.visible=false;g.scene.add(group);return group; }
+ function ensureMember(id,name){if(!members.has(id)){const m={id,name:name||('PLAYER '+members.size),state:'ALIVE',health:100,revive:0,room:'ENTRY',noise:0,lastSeen:performance.now(),target:null,object:null};if(id!=='local')m.object=avatar(m.name);members.set(id,m);}return members.get(id);}
+ function down(id){const m=members.get(id);if(!m||m.state!=='ALIVE')return false;m.state='DOWNED';m.health=0;m.revive=12;state.downedCount++;if(g.worldOverhaul&&g.worldOverhaul.say)g.worldOverhaul.say(m.id==='local'?'YOU ARE DOWN. A TEAMMATE HAS 12 SECONDS.':m.name+' IS DOWN.');render();return true;}
+ function revive(id){const m=members.get(id);if(!m||m.state!=='DOWNED')return false;m.state='ALIVE';m.health=45;m.revive=0;state.revives++;state.downedCount=Math.max(0,state.downedCount-1);if(g.worldOverhaul&&g.worldOverhaul.say)g.worldOverhaul.say(m.name+' IS BACK ON THEIR FEET');render();return true;}
+ function updateRevives(dt){members.forEach(m=>{if(m.state!=='DOWNED')return;m.revive=Math.max(0,m.revive-dt);if(m.revive<=0){m.state='DEAD';state.downedCount=Math.max(0,state.downedCount-1);if(m.object)m.object.visible=false;if(g.worldOverhaul&&g.worldOverhaul.say)g.worldOverhaul.say(m.name+' WAS LOST TO THE HOUSE');}});state.partyLost=Array.from(members.values()).filter(m=>m.state!=='DEAD').length===0;}
+ function updateAvatars(dt){const now=performance.now(),s=S();members.forEach(m=>{if(m.id==='local'||!m.object)return;if(now-m.lastSeen>8000){m.object.visible=false;return;}m.object.visible=m.state!=='DEAD';if(!m.target)return;const p=m.object.position,a=Math.min(1,dt*9);p.x+=(m.target.x-p.x)*a;p.z+=(m.target.z-p.z)*a;p.y=m.state==='DOWNED'?.25*s:0;if(Number.isFinite(m.target.rotation))m.object.rotation.y+=(m.target.rotation-m.object.rotation.y)*Math.min(1,dt*7);m.room=roomAt(p.x,p.z);});}
+ function nearestTarget(){let best=local,bd=Math.hypot((g.entity&&g.entity.x||g.player.x)-g.player.x,(g.entity&&g.entity.z||g.player.z)-g.player.z);members.forEach(m=>{if(m.id==='local'||m.state==='DEAD'||!m.object||!m.object.visible)return;const ep=g.entityGroup&&g.entityGroup.position||{x:g.player.x,z:g.player.z},d=Math.hypot(ep.x-m.object.position.x,ep.z-m.object.position.z);if(d<bd){bd=d;best=m;}});return best;}
+ function nearbyDowned(maxDist){let found=null,bd=maxDist||2.2*S();members.forEach(m=>{if(m.id==='local'||m.state!=='DOWNED'||!m.object)return;const d=Math.hypot(g.player.x-m.object.position.x,g.player.z-m.object.position.z);if(d<bd){bd=d;found=m;}});return found;}
+ function tryRevive(){const m=nearbyDowned();return m?revive(m.id):false;}
+ function snapshot(){const c=g.campaign,e=g.houseEndgame;return {stage:c&&c.stage||0,flags:Object.assign({},c&&c.flags||{}),seals:e&&e.seals||0,phase:g.phase||0,finished:!!(e&&e.finished)};}
+ function applyShared(snap){if(!snap)return;state.sharedStage=Math.max(state.sharedStage,snap.stage||0);state.sharedSeals=Math.max(state.sharedSeals,snap.seals||0);state.sharedFlags=Object.assign({},state.sharedFlags,snap.flags||{});state.partyWon=state.partyWon||!!snap.finished;}
+ function render(){const el=root.querySelector('#coop-members'),obj=root.querySelector('#coop-objective'),rv=root.querySelector('#coop-revive');el.innerHTML=Array.from(members.values()).map(m=>'<div>'+m.name+' <span style="opacity:.55">'+(m.state==='DOWNED'?('DOWN '+Math.ceil(m.revive)+'s'):m.state==='DEAD'?'LOST':m.room)+'</span></div>').join('');const e=g.houseEndgame,c=g.campaign;obj.textContent=e&&e.started&&!e.finished?'SEALS: '+(e.seals||0)+'/3':c?'STAGE '+c.stage:state.mode;const near=nearbyDowned();rv.textContent=near?'USE TO REVIVE '+near.name:'';root.style.display=(members.size>1||state.mode!=='SOLO_READY')?'block':'none';}
+ g.coop={state,members,addRemotePlayer:(id,name)=>{const m=ensureMember(id,name);state.mode='PARTY';render();return m;},updateRemotePlayer:(id,data)=>{const m=ensureMember(id,data&&data.name);if(data){if(data.state)m.state=data.state;if(Number.isFinite(data.health))m.health=data.health;if(Number.isFinite(data.revive))m.revive=data.revive;if(Number.isFinite(data.x)&&Number.isFinite(data.z))m.target={x:data.x,z:data.z,rotation:data.rotation||0};if(data.shared)applyShared(data.shared);}m.lastSeen=performance.now();render();return m;},removeRemotePlayer:id=>{const m=members.get(id);if(m&&m.object)g.scene.remove(m.object);members.delete(id);if(members.size===1)state.mode='SOLO_READY';render();},down,revive,tryRevive,nearbyDowned,nearestTarget,sync:syncCampaign,snapshot,applyShared};
+ const oldUpdatePlayer=g.updatePlayer.bind(g),oldUpdateEntity=g.updateEntity.bind(g),oldInteract=g.interactNow&&g.interactNow.bind(g);
+ g.updatePlayer=function(dt){oldUpdatePlayer(dt);if(this.state!=='PLAYING')return;syncCampaign();updateRevives(dt);updateAvatars(dt);render();};
+ if(oldInteract)g.interactNow=function(){if(tryRevive())return;return oldInteract();};
+ g.updateEntity=function(dt){oldUpdateEntity(dt);if(this.state!=='PLAYING'||!this.entity)return;const target=nearestTarget();this.entity.targetId=target&&target.id||'local';};
+ g.coopFoundation={state,members,render,updateAvatars};
 }
 boot();
 })();
