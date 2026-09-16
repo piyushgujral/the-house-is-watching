@@ -1,42 +1,33 @@
-/* THE HOUSE IS WATCHING — Engine 27: Party Room / Network Transport Layer
- * A real browser-to-browser foundation using WebRTC data channels with a tiny
- * signaling adapter. It is transport-ready without requiring a paid backend.
- * The game remains playable solo when no room is connected.
+/* THE HOUSE IS WATCHING — Engine 27: Browser Multiplayer Session v2
+ * Zero-backend WebRTC with manual offer/answer exchange, remote player sync,
+ * shared campaign snapshots, disconnect cleanup and mobile-friendly party UI.
  */
 (function(){
 'use strict';
 function boot(){
- const g=window.houseGame;
- if(!g||!g.scene||!g.player||!g.coop)return setTimeout(boot,180);
- if(g.__engine27)return;g.__engine27=true;
- const panel=document.createElement('div');panel.id='party-panel';panel.style.cssText='position:fixed;left:18px;bottom:118px;width:250px;padding:11px;background:rgba(4,4,6,.82);border:1px solid rgba(215,195,170,.25);font:11px/1.5 monospace;color:#ded3c5;z-index:80;display:none;pointer-events:auto';panel.innerHTML='<div style="font-weight:800;letter-spacing:2px">HOUSE PARTY</div><div id="party-status" style="opacity:.7;margin:4px 0">SOLO</div><input id="party-code" placeholder="ROOM CODE" maxlength="12" style="width:100%;box-sizing:border-box;background:#111;color:#ddd;border:1px solid #444;padding:6px"><div style="display:flex;gap:6px;margin-top:7px"><button id="party-host">HOST</button><button id="party-join">JOIN</button><button id="party-close">×</button></div><div id="party-info" style="opacity:.55;margin-top:7px">Use a signaling service URL later; gameplay state is transport-neutral.</div>';
+ const g=window.houseGame;if(!g||!g.scene||!g.player||!g.coop)return setTimeout(boot,180);if(g.__engine27)return;g.__engine27=true;
+ const panel=document.createElement('div');panel.id='party-panel';panel.style.cssText='position:fixed;left:12px;bottom:92px;width:min(330px,calc(100vw - 24px));max-height:72vh;overflow:auto;padding:12px;box-sizing:border-box;background:rgba(4,4,6,.92);border:1px solid rgba(215,195,170,.28);font:11px/1.45 monospace;color:#ded3c5;z-index:90;display:none;pointer-events:auto';panel.innerHTML='<div style="display:flex;justify-content:space-between"><b style="letter-spacing:2px">HOUSE PARTY</b><button id="party-close">×</button></div><div id="party-status" style="opacity:.75;margin:5px 0">SOLO</div><input id="party-name" placeholder="PLAYER NAME" maxlength="14" value="SURVIVOR" style="width:100%;box-sizing:border-box;background:#111;color:#ddd;border:1px solid #444;padding:7px;margin-bottom:5px"><div style="display:flex;gap:6px"><button id="party-host">CREATE OFFER</button><button id="party-join">JOIN OFFER</button></div><div id="party-step" style="margin:8px 0;opacity:.7">Host creates an offer. Send the code to the second device. No server account is required.</div><textarea id="party-signal" placeholder="PASTE OFFER / ANSWER CODE HERE" style="width:100%;height:92px;box-sizing:border-box;background:#0c0c0e;color:#cfc7bc;border:1px solid #3d3a38;padding:7px;font:9px monospace"></textarea><div style="display:flex;gap:6px;margin-top:6px"><button id="party-copy">COPY CODE</button><button id="party-apply">APPLY CODE</button></div>';
  document.body.appendChild(panel);
- const status=panel.querySelector('#party-status'),code=panel.querySelector('#party-code'),info=panel.querySelector('#party-info');
- const net={connected:false,role:'solo',room:null,peerId:'p_'+Math.random().toString(36).slice(2,9),pc:null,channel:null,signalUrl:null,send:null};
- function show(msg){status.textContent=msg;}
- function encode(v){try{return JSON.stringify(v)}catch(e){return ''}}
- function apply(packet){if(!packet||packet.type!=='state'||!g.coop)return;if(packet.id===net.peerId)return;g.coop.updateRemotePlayer(packet.id,packet.data||{});}
- function openChannel(ch){net.channel=ch;ch.onopen=()=>{net.connected=true;show('CONNECTED • '+(net.room||'ROOM'));info.textContent='Connected. Shared movement state is live.';};ch.onclose=()=>{net.connected=false;show('DISCONNECTED');};ch.onmessage=e=>{try{apply(JSON.parse(e.data))}catch(_){} };net.send=p=>{if(ch.readyState==='open')ch.send(encode(p));};}
- function makePeer(offer){
-  if(!window.RTCPeerConnection){show('WEBRTC NOT AVAILABLE');return null;}
-  const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});net.pc=pc;
-  if(offer){const ch=pc.createDataChannel('house');openChannel(ch);}
-  pc.ondatachannel=e=>openChannel(e.channel);
-  pc.onicecandidate=e=>{if(e.candidate)info.textContent='ICE READY — paste signaling through the configured adapter.';};
-  return pc;
- }
- async function host(){
-  net.role='host';net.room=(code.value||Math.random().toString(36).slice(2,8)).toUpperCase();code.value=net.room;g.coop.state.mode='PARTY';show('HOST • '+net.room);info.textContent='Host room created. Signaling adapter can exchange the offer with a joiner.';const pc=makePeer(true);if(!pc)return;const offer=await pc.createOffer();await pc.setLocalDescription(offer);net.offer=offer;}
- async function join(){
-  net.role='join';net.room=(code.value||'ROOM').toUpperCase();g.coop.state.mode='PARTY';show('JOIN • '+net.room);info.textContent='Join transport ready. A signaling adapter should provide the host offer.';makePeer(false);}
- panel.querySelector('#party-host').onclick=()=>host().catch(e=>show('HOST ERROR'));
- panel.querySelector('#party-join').onclick=()=>join().catch(e=>show('JOIN ERROR'));
- panel.querySelector('#party-close').onclick=()=>panel.style.display='none';
- const oldUpdate=g.updatePlayer.bind(g),clock={t:0};
- g.updatePlayer=function(dt){oldUpdate(dt);if(this.state!=='PLAYING')return;clock.t+=dt;if(net.send&&clock.t>.12){clock.t=0;const p=this.player;net.send({type:'state',id:net.peerId,data:{name:'PLAYER',state:'ALIVE',health:100,room:g.coop&&g.coop.state?g.coop.state.sharedStage:'',x:p.x,z:p.z,rotation:this.camera&&this.camera.rotation?this.camera.rotation.y:0}});}};
- g.partyNetwork={panel,net,host,join,openChannel,apply,show};
- // Expose a deliberate UI entry point for future menu integration.
- window.openHouseParty=()=>{panel.style.display=panel.style.display==='none'?'block':'none';};
+ const status=panel.querySelector('#party-status'),step=panel.querySelector('#party-step'),signal=panel.querySelector('#party-signal'),name=panel.querySelector('#party-name');
+ const net={connected:false,role:'solo',peerId:'p_'+Math.random().toString(36).slice(2,9),remoteId:null,pc:null,channel:null,send:null,lastRx:0,lastTx:0};
+ function show(s,d){status.textContent=s;if(d)step.textContent=d;}
+ const pack=o=>btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+ const unpack=s=>JSON.parse(decodeURIComponent(escape(atob((s||'').trim()))));
+ function waitIce(pc){return new Promise(resolve=>{if(pc.iceGatheringState==='complete')return resolve();const done=()=>{if(pc.iceGatheringState==='complete'){pc.removeEventListener('icegatheringstatechange',done);resolve();}};pc.addEventListener('icegatheringstatechange',done);setTimeout(resolve,5000);});}
+ function cleanupRemote(){if(net.remoteId&&g.coop)g.coop.removeRemotePlayer(net.remoteId);net.remoteId=null;net.connected=false;}
+ function apply(packet){if(!packet||packet.id===net.peerId)return;net.lastRx=performance.now();net.remoteId=packet.id;if(packet.type==='state')g.coop.updateRemotePlayer(packet.id,packet.data||{});if(packet.type==='revive'&&packet.target)g.coop.revive(packet.target);if(packet.type==='down'&&packet.target)g.coop.down(packet.target);}
+ function openChannel(ch){net.channel=ch;ch.onopen=()=>{net.connected=true;g.coop.state.mode='PARTY';show('CONNECTED','Two-device state sync is active. Keep this tab open while testing.');};ch.onclose=()=>{cleanupRemote();show('DISCONNECTED','Connection closed. Create a new offer to reconnect.');};ch.onerror=()=>show('NETWORK ERROR');ch.onmessage=e=>{try{apply(JSON.parse(e.data));}catch(_){}};net.send=p=>{if(ch.readyState==='open')ch.send(JSON.stringify(p));};}
+ function peer(createChannel){if(net.pc)try{net.pc.close();}catch(_){}cleanupRemote();const pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]});net.pc=pc;if(createChannel)openChannel(pc.createDataChannel('house',{ordered:false,maxRetransmits:2}));pc.ondatachannel=e=>openChannel(e.channel);pc.onconnectionstatechange=()=>{if(['failed','closed','disconnected'].includes(pc.connectionState)){cleanupRemote();show(pc.connectionState.toUpperCase());}};return pc;}
+ async function host(){net.role='host';show('CREATING OFFER','Wait a few seconds while connection candidates are gathered.');const pc=peer(true),offer=await pc.createOffer();await pc.setLocalDescription(offer);await waitIce(pc);signal.value=pack({kind:'offer',sdp:pc.localDescription});show('OFFER READY','Copy this code to the joining device. Then paste its ANSWER back here and press APPLY CODE.');}
+ async function joinOffer(){let data;try{data=unpack(signal.value);}catch(e){return show('INVALID OFFER','Paste the complete offer code from the host first.');}if(data.kind!=='offer')return show('NEED OFFER');net.role='join';const pc=peer(false);await pc.setRemoteDescription(data.sdp);const ans=await pc.createAnswer();await pc.setLocalDescription(ans);await waitIce(pc);signal.value=pack({kind:'answer',sdp:pc.localDescription});show('ANSWER READY','Copy this answer code back to the host. The host pastes it and presses APPLY CODE.');}
+ async function applyCode(){let data;try{data=unpack(signal.value);}catch(e){return show('INVALID CODE');}if(data.kind==='offer')return joinOffer();if(data.kind==='answer'&&net.role==='host'&&net.pc){await net.pc.setRemoteDescription(data.sdp);show('ANSWER APPLIED','Waiting for the peer connection to open…');return;}show('CODE DOES NOT MATCH THIS STEP');}
+ async function copy(){try{await navigator.clipboard.writeText(signal.value);show(status.textContent,'Code copied. Send it to the other device.');}catch(e){signal.focus();signal.select();show(status.textContent,'Select and copy the code manually.');}}
+ panel.querySelector('#party-host').onclick=()=>host().catch(()=>show('HOST ERROR'));panel.querySelector('#party-join').onclick=()=>joinOffer().catch(()=>show('JOIN ERROR'));panel.querySelector('#party-apply').onclick=()=>applyCode().catch(()=>show('APPLY ERROR'));panel.querySelector('#party-copy').onclick=copy;panel.querySelector('#party-close').onclick=()=>panel.style.display='none';
+ const oldUpdate=g.updatePlayer.bind(g);let clock=0;
+ g.updatePlayer=function(dt){oldUpdate(dt);if(this.state!=='PLAYING')return;clock+=dt;if(net.connected&&net.send&&clock>.08){clock=0;const p=this.player,m=g.coop.members.get('local');net.send({type:'state',id:net.peerId,data:{name:(name.value||'SURVIVOR').slice(0,14),state:m&&m.state||'ALIVE',health:m&&m.health||100,revive:m&&m.revive||0,x:p.x,z:p.z,rotation:this.camera&&this.camera.rotation?this.camera.rotation.y:0,shared:g.coop.snapshot()}});net.lastTx=performance.now();}if(net.connected&&net.lastRx&&performance.now()-net.lastRx>12000){cleanupRemote();show('PEER TIMED OUT','No state received for 12 seconds. Reconnect the room.');}};
+ g.partyNetwork={panel,net,host,join:joinOffer,applyCode,openChannel,apply,show};window.openHouseParty=()=>{panel.style.display=panel.style.display==='none'?'block':'none';};
+ // Keyboard shortcut for desktop testing; mobile can call openHouseParty from console/menu integration.
+ addEventListener('keydown',e=>{if(e.code==='KeyP'&&!e.repeat)window.openHouseParty();});
 }
 boot();
 })();
