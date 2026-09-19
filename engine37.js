@@ -20,7 +20,6 @@ function boot(){
  function members(){const out=[];if(g.player){out.push({id:'local',object:g.player,state:g.state==='PLAYING'?'ALIVE':'DEAD',local:true,name:'YOU'});}for(const m of g.coop.members.values()){if(m.id==='local'||m.state==='DEAD'||!m.object)continue;out.push({id:m.id,object:m.object,state:m.state||'ALIVE',local:false,name:m.name||m.id});}return out}
  function distance(a,b){return Math.hypot(a.x-b.x,a.z-b.z)/S()}
  function hidden(m){return !!(m.object&&m.object.userData&&m.object.userData.isHiding)}
- function layoutCost(a,b){const layout=g.dynamicHouseLayout&&g.dynamicHouseLayout.state;if(!layout||!layout.mutation)return 0;const ev=layout.mutation,blocked=ev.blocked;if(ev.kind!=='CLOSE_ROUTE'&&ev.kind!=='FUNNEL')return 0;const r=(g.dynamicHouseLayout.routes||[]).find(x=>x.id===blocked);if(!r)return 0;const pa=ROOM[a],pb=ROOM[b];const ar=Math.hypot(pa.x-r.x,pa.z-r.z),br=Math.hypot(pb.x-r.x,pb.z-r.z);return ar<4&&br<4?2.2:0}
  function roomHeat(k){const ri=g.reactiveInterior&&g.reactiveInterior.state&&g.reactiveInterior.state.rooms&&g.reactiveInterior.state.rooms[k];const hm=g.houseMemoryDirector&&g.houseMemoryDirector.state&&g.houseMemoryDirector.state.rooms&&g.houseMemoryDirector.state.rooms[k];return Math.min(1,Number(ri&&ri.heat||0)*.6+Number(hm&&hm.pressure||0)*.4)}
  function shortest(from,to){if(from===to)return [from];const q=[from],prev={};prev[from]=null;while(q.length){const n=q.shift();for(const x of (EDGES[n]||[])){if(prev[x]!==undefined)continue;prev[x]=n;if(x===to){const p=[];let c=x;while(c){p.unshift(c);c=prev[c];}return p;}q.push(x);}}return [from,to]}
  function scoreTarget(m){
@@ -43,7 +42,7 @@ function boot(){
  function decide(){
   const ent=g.entityGroup||g.entity;if(!ent)return;
   const pick=chooseTarget();if(!pick.member){state.mode='PATROL';state.goalRoom='HALL';state.waypoint=waypointFor('HALL');return;}
-  const target=pick.member,state.confidence=Math.max(0,Math.min(1,pick.score/10));state.targetId=target.id;state.targetRoom=roomAt(target.object.position.x,target.object.position.z);state.goalRoom=pickGoal(target);state.waypoint=waypointFor(state.goalRoom,target);state.history.push(target.id);if(state.history.length>10)state.history.shift();state.lastDecision=performance.now();state.version++;
+  const target=pick.member;state.confidence=Math.max(0,Math.min(1,pick.score/10));state.targetId=target.id;state.targetRoom=roomAt(target.object.position.x,target.object.position.z);state.goalRoom=pickGoal(target);state.waypoint=waypointFor(state.goalRoom,target);state.history.push(target.id);if(state.history.length>10)state.history.shift();state.lastDecision=performance.now();state.version++;
   const los=hasLOS(ent.position,target.object.position);if(los&&!hidden(target)){state.lastSeen={x:target.object.position.x,y:target.object.position.y,z:target.object.position.z,time:performance.now(),room:state.targetRoom};state.mode='HUNT';}
   else if(hidden(target)){state.mode='SEARCH';notify('THE WATCHER IS SEARCHING',state.targetRoom+' IS NOT SAFE',2800);}
   else if(state.mode==='AMBUSH'){notify('IT CHANGED COURSE',state.goalRoom+' IS IN ITS PATH',2500);}
@@ -51,7 +50,7 @@ function boot(){
  function steer(dt){
   const ent=g.entityGroup||g.entity;if(!ent||!state.waypoint)return;
   if(net&&net.connected&&net.role!=='host')return;
-  const dx=state.waypoint.x-ent.position.x,dz=state.waypoint.z-ent.position.z,d=Math.hypot(dx,dz);if(d<.7*S()){const target=members().find(m=>m.id===state.targetId);if(target){state.goalRoom=pickGoal(target);state.waypoint=waypointFor(state.goalRoom,target);}else{state.waypoint=waypointFor(Object.keys(ROOM)[Math.floor(Math.random()*Object.keys(ROOM).length)]); }return;}
+  const dx=state.waypoint.x-ent.position.x,dz=state.waypoint.z-ent.position.z,d=Math.hypot(dx,dz);if(d<.7*S()){const target=members().find(m=>m.id===state.targetId);if(target){state.goalRoom=pickGoal(target);state.waypoint=waypointFor(state.goalRoom,target);}else{state.waypoint=waypointFor(Object.keys(ROOM)[Math.floor(Math.random()*Object.keys(ROOM).length)]);}return;}
   const speed=state.mode==='AMBUSH'?2.7:state.mode==='SEARCH'?2.35:state.mode==='HUNT'?3.15:1.45;ent.position.x+=dx/d*speed*S()*dt;ent.position.z+=dz/d*speed*S()*dt;
   const ang=Math.atan2(dx,dz);ent.rotation.y+=(ang-ent.rotation.y)*Math.min(1,dt*5);
  }
