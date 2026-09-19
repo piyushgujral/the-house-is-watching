@@ -89,12 +89,12 @@ function boot(){
    const target=choose();
    moveHost(dt,target);
    if(g.entity){g.entity.state=D.mode;g.entity.targetId=D.targetId;g.entity.speed=D.mode==='CHASE'?3.7:D.mode==='HUNTING'?2.65:D.mode==='STALK'?1.35:1.05;}
-   if(g.watcherVisual){g.watcherVisual.position.copy(g.entityGroup.position);g.watcherVisual.position.y-=.78*S();g.watcherVisual.rotation.y=g.entityGroup.rotation.y;}
+   if(g.watcherVisual){g.watcherVisual.position.copy(g.entityGroup.position);g.watcherVisual.position.y-=.78*S();g.watcherVisual.rotation.y=g.entityGroup.rotation.y;if(g.watcherVisual.userData.tickAnimation)g.watcherVisual.userData.tickAnimation(g.clock.elapsedTime,dt,D.mode);}
    D.lastBroadcast-=dt;
    if(D.lastBroadcast<=0){D.lastBroadcast=.12;if(net.send)net.send({type:'WATCHER_STATE',id:net.peerId,seq:Date.now(),data:watcherPacket()});}
    if(target&&target.id!=='local'&&distance(target)<1.15){target.state='DOWNED';if(g.coop.down)g.coop.down(target.id);if(net.send)net.send({type:'DOWN',id:net.peerId,seq:Date.now(),data:{target:target.id}});}
   }else{
-   if(performance.now()-D.lastPacket>5000&&g.entity)g.entity.state='OBSERVE';
+   if(performance.now()-D.lastPacket>5000&&g.entity)g.entity.state='OBSERVE';if(g.watcherVisual&&g.watcherVisual.userData.tickAnimation)g.watcherVisual.userData.tickAnimation(g.clock.elapsedTime,dt,D.mode);
   }
  };
  g.multiplayerWatcher={state:D,choose,score,applyRemote};
